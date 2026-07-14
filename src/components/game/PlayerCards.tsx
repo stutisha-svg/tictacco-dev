@@ -1,0 +1,101 @@
+import { motion } from "motion/react";
+import { XoxIndicator } from "./XoxIndicator";
+import type { Owner } from "@/game/rules";
+
+interface Props {
+  progressYou: number;
+  progressOpp: number;
+  leader: Owner | null;
+  round: number;
+}
+
+function Avatar({
+  name,
+  initial,
+  owner,
+  active,
+}: {
+  name: string;
+  initial: string;
+  owner: Owner;
+  active: boolean;
+}) {
+  const color = owner === "you" ? "var(--player-you)" : "var(--player-opp)";
+  const size = 68;
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <motion.div
+        animate={{ scale: active ? [1, 1.06, 1] : 1 }}
+        transition={{ duration: 1.2, repeat: active ? Infinity : 0 }}
+        style={{ width: size, height: size }}
+      >
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: "visible" }}>
+          <defs>
+            <filter id={`av-${owner}`} x="-20%" y="-20%" width="140%" height="140%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed={owner === "you" ? 4 : 9} />
+              <feDisplacementMap in="SourceGraphic" scale="2" />
+            </filter>
+          </defs>
+          <g filter={`url(#av-${owner})`}>
+            <circle cx={size / 2} cy={size / 2} r={size / 2 - 5} fill="var(--paper)" />
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={size / 2 - 5}
+              fill="none"
+              stroke={color}
+              strokeWidth={3.5}
+            />
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={size / 2 - 9}
+              fill="none"
+              stroke={color}
+              strokeOpacity={0.4}
+              strokeWidth={1.5}
+            />
+          </g>
+          <text
+            x={size / 2}
+            y={size / 2 + 8}
+            textAnchor="middle"
+            fontFamily="var(--font-display)"
+            fontSize={28}
+            fill="var(--ink)"
+          >
+            {initial}
+          </text>
+        </svg>
+      </motion.div>
+      <div
+        className="text-sm font-normal"
+        style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}
+      >
+        {name}
+      </div>
+    </div>
+  );
+}
+
+export function PlayerCards({ progressYou, progressOpp, leader, round }: Props) {
+  return (
+    <div className="flex w-full items-start justify-between px-4">
+      <Avatar name="you" initial="Y" owner="you" active={leader === "you"} />
+      <div className="flex flex-col items-center pt-2">
+        <XoxIndicator
+          progressYou={progressYou}
+          progressOpp={progressOpp}
+          leader={leader}
+        />
+        <div
+          className="mt-1 text-xs"
+          style={{ fontFamily: "var(--font-hand)", color: "var(--ink-soft)" }}
+        >
+          round {round}
+        </div>
+      </div>
+      <Avatar name="rival" initial="R" owner="opp" active={leader === "opp"} />
+    </div>
+  );
+}
