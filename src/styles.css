@@ -22,8 +22,8 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
-  --font-hand: "Patrick Hand", "Caveat", cursive;
-  --font-display: "Caveat", cursive;
+  --font-hand: "Caveat", "Patrick Hand", cursive;
+  --font-display: "Caveat", "Patrick Hand", cursive;
 }
 
 :root {
