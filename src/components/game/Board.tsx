@@ -183,33 +183,6 @@ export function Board({ state, onTap, boardPx }: Props) {
         );
       })}
 
-      {won && state.winner && (
-        <motion.g
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          {state.winner.line.map((li) => {
-            const r = Math.floor(li / SIZE);
-            const c = li % SIZE;
-            return (
-              <motion.circle
-                key={`w-${li}`}
-                cx={c * cell + cell / 2}
-                cy={r * cell + cell / 2}
-                r={cell * 0.55}
-                fill="none"
-                stroke={state.winner!.owner === "you" ? "var(--player-you)" : "var(--player-opp)"}
-                strokeWidth={4}
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 0.6 }}
-                filter="url(#crayon-rough)"
-              />
-            );
-          })}
-        </motion.g>
-      )}
     </svg>
   );
 }
