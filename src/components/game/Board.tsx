@@ -134,13 +134,14 @@ export function Board({ state, onTap, boardPx }: Props) {
               <motion.rect
                 width={cell}
                 height={cell}
-                fill="var(--player-you)"
                 initial={{ opacity: 0 }}
-                animate={{
-                  opacity: state.winner?.owner === "you" ? 0.22 : 0,
-                }}
+                animate={{ opacity: 0.55 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
                 style={{
-                  fill: state.winner?.owner === "you" ? "var(--player-you)" : "var(--player-opp)",
+                  fill:
+                    state.winner?.owner === "you"
+                      ? "var(--player-you)"
+                      : "var(--player-opp)",
                 }}
               />
             )}
