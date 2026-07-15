@@ -1,89 +1,72 @@
+/**
+ * Shape — renders a hand-drawn X or O glyph inside a grid cell.
+ *
+ * Purpose: single visual primitive for both committed and tentative placements.
+ * State: stateless presentation component.
+ * Deps: motion/react for stroke-draw and fade-in animations; CrayonDefs filters
+ *       (`crayon-soft`) must exist in the parent <svg>.
+ *
+ * Note: text is rendered with the Caveat crayon font (--font-display) so the
+ * X / O glyphs share the same hand-drawn language as the rest of the UI.
+ */
 import { motion } from "motion/react";
 import type { ShapeKind, Owner } from "@/game/rules";
 
-interface Props {
+interface ShapeProps {
   shape: ShapeKind;
   owner: Owner;
   size: number;
   tentative?: boolean;
-  draw?: boolean; // animate draw-in
+  draw?: boolean;
   delay?: number;
   seed?: number;
 }
 
-function colorFor(owner: Owner) {
+function colorForOwner(owner: Owner): string {
   return owner === "you" ? "var(--player-you)" : "var(--player-opp)";
 }
 
-export function Shape({ shape, owner, size, tentative, draw = true, delay = 0, seed = 0 }: Props) {
-  const stroke = colorFor(owner);
-  const sw = Math.max(3, size * 0.11);
-  const pad = size * 0.22;
-  const opacity = tentative ? 0.42 : 0.95;
+export function Shape({
+  shape,
+  owner,
+  size,
+  tentative,
+  draw = true,
+  delay = 0,
+  seed = 0,
+}: ShapeProps) {
+  const stroke = colorForOwner(owner);
+  const opacity = tentative ? 0.45 : 1;
+  const jitter = (n: number) =>
+    (Math.sin(seed * 12.9898 + n * 78.233) * 43758.5453) % 1;
+  const rot = jitter(1) * 8;
+  const dx = jitter(2) * (size * 0.03);
+  const dy = jitter(3) * (size * 0.03);
 
-  // slight jitter on endpoints for hand-drawn feel
-  const j = (n: number) => (Math.sin(seed * 12.9898 + n * 78.233) * 43758.5453) % 1;
-  const wob = size * 0.04;
-
-  if (shape === "X") {
-    const p1 = `M ${pad + j(1) * wob} ${pad + j(2) * wob} Q ${size / 2 + j(3) * wob} ${
-      size / 2 + j(4) * wob
-    } ${size - pad + j(5) * wob} ${size - pad + j(6) * wob}`;
-    const p2 = `M ${size - pad + j(7) * wob} ${pad + j(8) * wob} Q ${size / 2 + j(9) * wob} ${
-      size / 2 + j(10) * wob
-    } ${pad + j(11) * wob} ${size - pad + j(12) * wob}`;
-    return (
-      <g style={{ opacity }} filter="url(#crayon-soft)">
-        <motion.path
-          d={p1}
-          stroke={stroke}
-          strokeWidth={sw}
-          strokeLinecap="round"
-          fill="none"
-          initial={draw ? { pathLength: 0 } : { pathLength: 1 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 0.35, delay, ease: "easeOut" }}
-        />
-        <motion.path
-          d={p2}
-          stroke={stroke}
-          strokeWidth={sw}
-          strokeLinecap="round"
-          fill="none"
-          initial={draw ? { pathLength: 0 } : { pathLength: 1 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 0.35, delay: delay + 0.28, ease: "easeOut" }}
-        />
-      </g>
-    );
-  }
-
-  // O — 1.05 turn spiral so it overshoots like a real hand
-  const cx = size / 2;
-  const cy = size / 2;
-  const r = size / 2 - pad;
-  const turns = 32;
-  let d = "";
-  for (let i = 0; i <= turns; i++) {
-    const t = i / turns;
-    const ang = -Math.PI / 2 + t * Math.PI * 2 * 1.04;
-    const rr = r + j(i) * wob * 0.5;
-    const x = cx + Math.cos(ang) * rr;
-    const y = cy + Math.sin(ang) * rr;
-    d += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
-  }
   return (
-    <g style={{ opacity }} filter="url(#crayon-soft)">
-      <motion.path
-        d={d}
+    <motion.g
+      style={{ opacity, transformOrigin: `${size / 2}px ${size / 2}px` }}
+      initial={draw ? { scale: 0.6, opacity: 0 } : false}
+      animate={{ scale: 1, opacity }}
+      transition={{ duration: 0.35, delay, ease: "easeOut" }}
+      filter="url(#crayon-soft)"
+    >
+      <text
+        x={size / 2 + dx}
+        y={size / 2 + dy}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontFamily="var(--font-display)"
+        fontWeight={700}
+        fontSize={size * 0.85}
+        fill={stroke}
         stroke={stroke}
-        strokeWidth={sw}
-        strokeLinecap="round"
-        fill="none"
-        initial={draw ? { pathLength: 0 } : { pathLength: 1 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 0.55, delay, ease: "easeOut" }}
-      />
-    </g>
+        strokeWidth={size * 0.03}
+        paintOrder="stroke"
+        transform={`rotate(${rot} ${size / 2} ${size / 2})`}
+      >
+        {shape}
+      </text>
+    </motion.g>
   );
 }
