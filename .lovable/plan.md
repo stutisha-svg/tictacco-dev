@@ -1,97 +1,64 @@
+## XOX — Crayon Polish Pass
 
-# XOX — Crayon Grid Duel
+Only the listed items change. Win/lose badge visuals stay as-is.
 
-A portrait mobile web game. Two players (you vs an opponent — bot for the prototype, room-based multiplayer stub for later) tap an 8x8 grid to place shapes. Every 5-second round both moves reveal simultaneously with dramatic hand-drawn animation. First to draw a literal `X-O-X` sequence in a row/column/diagonal wins.
+### 1. Font + shape rendering (Caveat everywhere, no italics)
+- `src/styles.css`: verify `--font-display` / `--font-hand` both load Caveat via the existing `<link>` in `__root.tsx`; add `font-style: normal !important` on the base body + explicit `font-style: normal` on all text tokens. Remove any `italic` classes if present.
+- `Shape.tsx`: X/O currently render as text glyphs — confirm `font-style: normal`, `font-family: var(--font-display)`, and the crayon SVG filter is applied to the text. Winning/losing badge text keeps its current styling (may remain italic if it already is).
 
-## Visual direction
+### 2. Minimized badge card + return to grid
+- `GameScreen.tsx`: after the badge slide-in animation completes (~1.2s hold), animate the overlay to fade out the dim backdrop and shrink the badge + "play again" into a small rounded-rectangle **floating card** anchored bottom-center (above the bottom bar), ~260px wide, crayon border, off-white fill.
+- The grid becomes visible + interactive-looking again (still frozen — no new taps accepted).
+- The floating card contains the mini badge glyph + "play again" button; tapping restarts.
+- Confetti / shake still fire during the full-size badge moment, not after minimize.
 
-Hand-drawn / crayon on off-white paper. No shadcn polish, no glassmorphism, no clean geometric borders.
+### 3. Player-driven timer + blank warning
+- `useGameEngine.ts`: timer only starts when `myTentative` becomes non-null. Reset `timerStart` on first placement of the round; clearing the tentative (triple-tap) pauses/resets it.
+- Opponent's lock waits for the player's timer to elapse — no auto-lock on blank.
+- Add a "nudge" warning: if the player has been idle >8s with no tentative, show a **red crayon dot** pulsing next to the bottom bar label, and change label to "your move — rival is waiting". Dot disappears the moment they tap a tile.
+- `RoundTimer.tsx`: accepts a `running` prop already; add an `idle` visual (empty rectangle with faint dashed crayon outline) when not running.
 
-- Background: warm paper (`#f4ecdc`) with subtle noise/grain (SVG turbulence filter).
-- Grid: irregular, slightly wobbly lines drawn as SVG paths with `stroke-linecap: round` and a `feTurbulence` + `feDisplacementMap` filter so every stroke looks scratched.
-- Shapes: X and O drawn as SVG paths with a "crayon" filter (roughness + slight opacity variation) — orange `#ff7a3d` for you, cyan `#39c6d9` for opponent.
-- Typography: a hand-drawn display font (Google Font "Caveat" for headings, "Patrick Hand" for UI text). Loaded via `<link>` in `__root.tsx` head.
-- Player cards: hand-drawn circles (wobbly SVG ellipse stroke), initials inside, name below in Caveat.
-- Center XOX indicator: three light-grey crayon-stroked shapes between the two avatars.
+### 4. Louder XOX indicator
+- `XoxIndicator.tsx`: increase shape size (~48px), thicker crayon strokes, and on each fill trigger:
+  - a burst of 6–8 tiny crayon confetti glyphs (reuse `Confetti` primitives, scoped to that shape's bounding box)
+  - a quick color flash halo (radial crayon-textured circle scaling 0→1.4, fading out over 500ms)
+  - a spring scale bump (1 → 1.25 → 1)
+- Add subtle idle "breathing" only on the leader's next-to-fill slot to draw the eye.
 
-## Screens & layout (portrait, single screen)
+### 5. Winner crown (drawn, not popped)
+- New `Crown.tsx`: SVG crown path (3 points + base line) with crayon filter, animated via `pathLength` 0→1 over ~700ms, colored in the winner's hue.
+- `PlayerCards.tsx`: accepts `winner: Owner | null`; renders `<Crown>` absolutely positioned above that avatar's circle.
+- Appears only after the badge minimizes (step 2), stays until "play again" (which reloads → gone).
 
-```text
-┌───────────────────────────┐
-│  ( You )  X O X  ( Opp )  │  ← player cards + center indicator
-│  ▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░  │  ← 5s round progress (crayon bar)
-│                           │
-│   ┌─┬─┬─┬─┬─┬─┬─┬─┐       │
-│   ├─┼─┼─┼─┼─┼─┼─┼─┤       │
-│   │  8x8 crayon grid │    │
-│   └─┴─┴─┴─┴─┴─┴─┴─┘       │
-│                           │
-│   Round 3   ✎ tap to play │
-└───────────────────────────┘
-```
+### 6. Progress bar = rounded rectangle with squiggle fill
+- `RoundTimer.tsx`: outer shape is a crayon-stroked rounded rectangle (~24px tall, full width of bottom bar area).
+- Inside, a horizontally-sweeping **zigzag/squiggle path** (crayon-textured, thicker stroke) whose visible width grows with elapsed time (animate a clip-path or mask width from 0 → 100%).
+- Squiggle color matches the tentative-shape color (orange when placed, muted grey when idle).
 
-## Interaction model
+### 7. Collision: smoke-squiggle scribble
+- Collision reveal: draw both players' shapes first (existing behavior), then overlay a new `SmokeScribble.tsx` — a spiraling, loopy black crayon path (bezier curves, roughly circular smoke coil) instead of the current jagged zig-zag. Animate `pathLength` 0→1 over ~500ms.
+- Replace `DeadScribble` usage on collision tiles with `SmokeScribble`. Keep `DeadScribble` for any non-collision dead cases if applicable, or retire it if unused.
 
-- Tap a tile: tentative X (your color, low opacity, wobble-in).
-- Double-tap: tentative O.
-- Triple-tap: clear tentative.
-- Only one tentative tile per round; tapping a different tile moves the tentative.
-- A round-wide 5s timer runs continuously (simultaneous rounds). Progress bar sits under the player cards.
-- On timer end → lock-in phase → reveal.
+### 8. Straight grid lines, crayon texture only
+- `Board.tsx`: grid rendering currently uses wobbled paths — replace with straight `<line>` elements (perfect x/y coords) but keep the crayon SVG filter (`feTurbulence` + `feDisplacementMap` with reduced `scale` so displacement only adds grain/width variance, not curvature). Increase `baseFrequency` for finer grain, drop `scale` from ~2 to ~0.6.
+- Skeleton reveal keeps its current behavior on the new straight lines.
 
-## Round lifecycle
+### 9. Reveal focus: dim + spotlight sweep + enlarged banner
+- During `phase === "revealing"`:
+  - Full-screen `bg-black/35` dim layer with a radial "hole" spotlight over the board area (SVG radial gradient mask, warm cream color).
+  - Spotlight animates: sweeps left→right across the board over ~700ms in sync with the skeleton stroke reveal.
+  - Bottom-bar label "revealing…" replaced by a larger centered banner (~text-heading-md, crayon-underlined, pulsing 1 → 1.05 → 1). Collision variant: "collision — tile wasted".
+  - Banner and spotlight both exit when phase leaves `revealing`.
 
-1. **Placement (5s)** — timer bar fills left→right in the player's color (or neutral crayon grey if no tentative yet).
-2. **Lock** — tentative shape "settles": brief scale/opacity snap, ink darkens.
-3. **Skeleton reveal (≈900ms)** — every empty tile the opponent could have touched gets a light crayon skeleton stroke animated along its border (SVG `pathLength` 0→1, staggered from the last-known opponent focus outward). Uses Framer Motion `motion.path` with `initial={{ pathLength: 0 }}` / `animate={{ pathLength: 1 }}`.
-4. **Opponent shape draw** — on their chosen tile, the X or O is drawn stroke-by-stroke (path draw animation, ~500ms), color cyan.
-5. **Collision resolution** — if both picked the same tile:
-   - Both shapes are drawn overlapping.
-   - A black scribble path scribbles across the tile (rapid multi-segment path, `pathLength` 0→1 in ~350ms) marking it wasted. Tile becomes permanently dead.
-6. **Win check** — scan rows/cols/diagonals for adjacent triples matching the literal sequence `X,O,X` where all three tiles are owned by the same player. If found → win animation (winner's color floods the winning triple, screen shake, "YOU WIN" in Caveat).
-7. Otherwise → next round starts, timer resets.
+### 10. Scope guard
+- No changes to: win/lose badge visuals + animation, WinBadge, Confetti glyph shapes, PlayerCards avatar look (only adds crown), design-system route, game rules, bot logic.
 
-## Center XOX indicator (progress fill)
+---
 
-For each player, find their *best line* (row/col/diagonal) — the one where they're closest to completing an `X-O-X` triple they own. Their side of the three center shapes fills based on how many of the three positions are already correctly placed (0/3 grey → 1/3 partial crayon fill → 2/3 nearly full → 3/3 = win). Left shapes fill with orange for you, right shapes fill with cyan for opponent. Middle shape shared — fills toward whoever is leading.
+### Technical notes
 
-## Opponent
-
-Prototype ships with a bot (`selectBotMove(boardState)`), but the game state is structured so a future WebSocket/room layer can swap in a human opponent without refactoring components. No backend in this plan — pure client state.
-
-- Bot difficulty: picks a random empty (non-dead) tile with light heuristic (prefer tiles that extend its own near-XOX line).
-- Bot's move is chosen at round start but hidden until reveal.
-
-## Technical details
-
-- **Route**: replace `src/routes/index.tsx` placeholder with the game screen. Update `__root.tsx` head to real title/description ("XOX — a crayon duel").
-- **Fonts**: add `<link>` for Caveat + Patrick Hand in `__root.tsx` head (not `@import` in CSS — per Tailwind v4 rule).
-- **State**: single `useReducer` in `src/game/useGameEngine.ts` holding `board[64]`, `round`, `phase` ('placing' | 'locking' | 'revealing' | 'won'), `myTentative`, `opponentMove`, `deadTiles`, `winner`. Tap handler in `Tile` dispatches; a `useEffect` runs the 5s timer via `setTimeout` + `requestAnimationFrame` for smooth bar.
-- **Components** (all in `src/components/game/`):
-  - `GameScreen.tsx` — layout, owns engine hook.
-  - `PlayerCards.tsx` — two crayon avatars + `XoxIndicator` between them.
-  - `XoxIndicator.tsx` — three SVG shapes with per-side fill props.
-  - `RoundTimer.tsx` — crayon progress bar (SVG rect with animated width; color = current tentative owner).
-  - `Board.tsx` — SVG 8x8 grid with the wobble filter, renders 64 `Tile`s.
-  - `Tile.tsx` — handles tap/double/triple detection (300ms window), renders tentative + committed shapes + dead scribble.
-  - `Shape.tsx` — reusable X or O crayon SVG with draw-in animation.
-  - `SkeletonReveal.tsx` — overlay that animates grid lines during reveal phase.
-  - `WinOverlay.tsx` — final flourish.
-- **Animation**: `framer-motion` (already in the ecosystem; install with `bun add framer-motion` if missing). All draw-ins use `motion.path` with `pathLength`. Wobble/tremble on hover uses `animate` loops. Screen shake on win via `motion.div` with keyframe `x`/`y`.
-- **Tap detection**: custom hook `useTapCount` in `Tile` — count taps within a 300ms window, dispatch on window close (so triple-tap doesn't fire an X first). Trade-off: 300ms input latency per tap, which is acceptable for turn-based play.
-- **Colors**: add crayon palette tokens to `src/styles.css` (`--paper`, `--ink`, `--player-you`, `--player-opp`, `--dead`) using `oklch`. No hardcoded hex in components — reference via CSS vars / Tailwind arbitrary values from tokens.
-- **Grid wobble filter**: one shared `<defs><filter id="crayon">` with `feTurbulence baseFrequency="0.9"` + `feDisplacementMap scale="1.5"` used across all SVG strokes.
-- **Head metadata**: real title, description, og:title, og:description, og:type, twitter:card in `__root.tsx`. Leaf `index.tsx` route sets a matching page head (no og:image — omit per guidance).
-
-## Out of scope for this build
-
-- Real multiplayer / room joining (bot only; state shape ready for it).
-- Sound effects.
-- Persistence / accounts.
-- Landing / menu screen — game opens directly at `/`.
-
-## Files to create / change
-
-- Modify: `src/routes/__root.tsx` (head + font links), `src/routes/index.tsx` (mount `GameScreen`), `src/styles.css` (crayon tokens + paper background).
-- Create: `src/game/useGameEngine.ts`, `src/game/bot.ts`, `src/game/rules.ts` (win detection, best-line scoring), `src/components/game/*` (list above), `src/components/game/CrayonDefs.tsx` (shared SVG filter/defs).
-- Install: `framer-motion` if not already present.
+- **Files created**: `src/components/game/Crown.tsx`, `src/components/game/SmokeScribble.tsx`, `src/components/game/RevealSpotlight.tsx`.
+- **Files edited**: `styles.css`, `useGameEngine.ts` (timer trigger + idle warning state), `GameScreen.tsx` (badge minimize + spotlight/banner + warning dot + crown wiring), `RoundTimer.tsx` (rounded-rect squiggle + idle state), `Board.tsx` (straight lines, collision → SmokeScribble), `PlayerCards.tsx` (crown prop), `XoxIndicator.tsx` (bigger + confetti/flash), `Shape.tsx` (font-style normal), possibly `DeadScribble.tsx` removed if unused.
+- **State additions**: `phase` gains an implicit "idle-timer" via `myTentative === null` check; add `idleWarning: boolean` derived from an internal 8s timeout when placing and no tentative; add `badgeMinimized: boolean` triggered ~1.2s after `phase === 'won'`.
+- **Reset flow**: `reset()` continues to `window.location.reload()` — crown/streak state naturally gone.
+- **No new deps.**
