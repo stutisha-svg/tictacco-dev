@@ -84,8 +84,17 @@
     background-color: var(--color-paper);
     color: var(--color-ink);
     font-family: var(--font-hand);
+    font-style: normal;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body, button, input, textarea, select {
+    font-style: normal;
+  }
+
+  em, i {
+    font-style: normal;
   }
 
   body {

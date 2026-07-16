@@ -21,10 +21,15 @@ export interface GameState {
   board: Board;
   round: number;
   phase: Phase;
-  timerStart: number;
+  /** timestamp when the current round's 5s clock started (only after first placement) */
+  timerStart: number | null;
   duration: number;
   myTentative: Tentative | null;
-  oppMove: Tentative | null; // revealed at reveal phase
+  /** true once the player has placed at least one tentative this round */
+  roundStarted: boolean;
+  /** true when player has been idle >8s in placing phase with nothing placed */
+  idleWarning: boolean;
+  oppMove: Tentative | null;
   lastReveal: {
     mine: Tentative | null;
     opp: Tentative | null;
@@ -38,18 +43,22 @@ export interface GameState {
 type Action =
   | { type: "tap"; tile: number }
   | { type: "lock"; oppMove: Tentative | null }
-  | { type: "nextRound" };
+  | { type: "nextRound" }
+  | { type: "setIdleWarning"; value: boolean };
 
 const ROUND_MS = 5000;
 const REVEAL_MS = 1800;
+const IDLE_WARN_MS = 8000;
 
 const initial = (): GameState => ({
   board: emptyBoard(),
   round: 1,
   phase: "placing",
-  timerStart: Date.now(),
+  timerStart: null,
   duration: ROUND_MS,
   myTentative: null,
+  roundStarted: false,
+  idleWarning: false,
   oppMove: null,
   lastReveal: null,
   winner: null,
@@ -58,7 +67,6 @@ const initial = (): GameState => ({
 });
 
 function cycleShape(prev: ShapeKind | null): ShapeKind | "clear" {
-  // taps cycle: none -> X -> O -> clear
   if (prev === null) return "X";
   if (prev === "X") return "O";
   return "clear";
@@ -76,9 +84,21 @@ function reducer(state: GameState, action: Action): GameState {
           : null;
       const next = cycleShape(prev);
       if (next === "clear") {
+        // tentative cleared; keep roundStarted true if timer already running
         return { ...state, myTentative: null };
       }
-      return { ...state, myTentative: { tile: action.tile, shape: next } };
+      const startingNow = !state.roundStarted;
+      return {
+        ...state,
+        myTentative: { tile: action.tile, shape: next },
+        roundStarted: true,
+        idleWarning: false,
+        timerStart: startingNow ? Date.now() : state.timerStart,
+      };
+    }
+    case "setIdleWarning": {
+      if (state.phase !== "placing") return state;
+      return { ...state, idleWarning: action.value };
     }
     case "lock": {
       const board = state.board.map((t) => ({
@@ -121,7 +141,9 @@ function reducer(state: GameState, action: Action): GameState {
         ...state,
         phase: "placing",
         round: state.round + 1,
-        timerStart: Date.now(),
+        timerStart: null,
+        roundStarted: false,
+        idleWarning: false,
         duration: ROUND_MS,
         oppMove: null,
       };
@@ -134,16 +156,30 @@ export function useGameEngine() {
   const stateRef = useRef(state);
   stateRef.current = state;
 
-  // round timer
+  // Round timer: only starts once the player has placed a tentative.
   useEffect(() => {
-    if (state.phase !== "placing") return;
+    if (state.phase !== "placing" || !state.roundStarted) return;
     const t = setTimeout(() => {
       const s = stateRef.current;
       const opp = selectBotMove(s.board, "opp");
       dispatch({ type: "lock", oppMove: opp });
     }, ROUND_MS);
     return () => clearTimeout(t);
-  }, [state.phase, state.round]);
+  }, [state.phase, state.round, state.roundStarted]);
+
+  // Idle-warning: nudge after 8s of no placement.
+  useEffect(() => {
+    if (state.phase !== "placing" || state.roundStarted) {
+      if (state.idleWarning) dispatch({ type: "setIdleWarning", value: false });
+      return;
+    }
+    const t = setTimeout(
+      () => dispatch({ type: "setIdleWarning", value: true }),
+      IDLE_WARN_MS,
+    );
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.phase, state.round, state.roundStarted]);
 
   // reveal -> next round
   useEffect(() => {
@@ -154,7 +190,6 @@ export function useGameEngine() {
 
   const tap = useCallback((tile: number) => dispatch({ type: "tap", tile }), []);
   const reset = useCallback(() => {
-    // full reset via a trick: replace state
     window.location.reload();
   }, []);
 

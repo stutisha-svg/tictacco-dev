@@ -4,7 +4,7 @@ import type { GameState } from "@/game/useGameEngine";
 import { SIZE } from "@/game/rules";
 import { CrayonDefs } from "./CrayonDefs";
 import { Shape } from "./Shape";
-import { DeadScribble } from "./DeadScribble";
+import { SmokeScribble } from "./SmokeScribble";
 
 interface Props {
   state: GameState;
@@ -12,38 +12,21 @@ interface Props {
   boardPx: number;
 }
 
-/** deterministic jitter */
-function jit(seed: number) {
-  return ((Math.sin(seed * 12.9898) * 43758.5453) % 1) * 2 - 1;
-}
-
 export function Board({ state, onTap, boardPx }: Props) {
   const cell = boardPx / SIZE;
   const revealing = state.phase === "revealing";
-  const won = state.phase === "won";
 
+  // STRAIGHT grid lines — crayon texture comes from the SVG filter, not from
+  // wobbled coordinates.
   const gridPaths = useMemo(() => {
     const paths: { d: string; key: string }[] = [];
-    // horizontals (SIZE+1 lines)
     for (let r = 0; r <= SIZE; r++) {
       const y = r * cell;
-      let d = `M 0 ${y + jit(r * 3) * 1.5}`;
-      const segs = 10;
-      for (let s = 1; s <= segs; s++) {
-        const x = (boardPx * s) / segs;
-        d += ` L ${x} ${y + jit(r * 3 + s) * 1.8}`;
-      }
-      paths.push({ d, key: `h${r}` });
+      paths.push({ d: `M 0 ${y} L ${boardPx} ${y}`, key: `h${r}` });
     }
     for (let c = 0; c <= SIZE; c++) {
       const x = c * cell;
-      let d = `M ${x + jit(c * 7) * 1.5} 0`;
-      const segs = 10;
-      for (let s = 1; s <= segs; s++) {
-        const y = (boardPx * s) / segs;
-        d += ` L ${x + jit(c * 7 + s) * 1.8} ${y}`;
-      }
-      paths.push({ d, key: `v${c}` });
+      paths.push({ d: `M ${x} 0 L ${x} ${boardPx}`, key: `v${c}` });
     }
     return paths;
   }, [cell, boardPx]);
@@ -78,25 +61,25 @@ export function Board({ state, onTap, boardPx }: Props) {
         );
       })}
 
-      {/* grid strokes (drawn above hit surface visually, but pointer-events off) */}
+      {/* Grid strokes: straight lines with crayon filter for grainy texture. */}
       <g filter="url(#crayon-soft)" style={{ pointerEvents: "none" }}>
         {gridPaths.map((p, i) => (
           <motion.path
             key={p.key}
             d={p.d}
             stroke="var(--ink)"
-            strokeOpacity={0.55}
-            strokeWidth={2}
+            strokeOpacity={0.6}
+            strokeWidth={2.4}
             strokeLinecap="round"
             fill="none"
             initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 0.55 }}
-            transition={{ duration: 0.6, delay: i * 0.02 }}
+            animate={{ pathLength: 1, opacity: 0.6 }}
+            transition={{ duration: 0.5, delay: i * 0.015 }}
           />
         ))}
       </g>
 
-      {/* skeletal reveal pulse over grid */}
+      {/* Skeletal reveal — thicker pulse along the same straight grid. */}
       <AnimatePresence>
         {revealing && (
           <g style={{ pointerEvents: "none" }} filter="url(#crayon-rough)">
@@ -104,11 +87,11 @@ export function Board({ state, onTap, boardPx }: Props) {
               <motion.path
                 key={`sk-${p.key}`}
                 d={p.d}
-                stroke="var(--ink)"
-                strokeWidth={3.2}
+                stroke="var(--player-you)"
+                strokeWidth={3.6}
                 strokeLinecap="round"
                 fill="none"
-                initial={{ pathLength: 0, opacity: 0.9 }}
+                initial={{ pathLength: 0, opacity: 0.95 }}
                 animate={{ pathLength: 1, opacity: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.9, delay: (i % 9) * 0.04, ease: "easeOut" }}
@@ -159,8 +142,8 @@ export function Board({ state, onTap, boardPx }: Props) {
               />
             ))}
 
-            {/* dead scribble */}
-            {tile.dead && <DeadScribble size={cell} seed={i} />}
+            {/* collision → smoke scribble on top */}
+            {tile.dead && <SmokeScribble size={cell} seed={i} />}
 
             {/* my tentative preview */}
             {tent && !tile.dead && tile.placements.length === 0 && (
@@ -183,7 +166,6 @@ export function Board({ state, onTap, boardPx }: Props) {
           </g>
         );
       })}
-
     </svg>
   );
 }

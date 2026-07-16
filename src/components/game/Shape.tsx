@@ -1,13 +1,7 @@
 /**
- * Shape — renders a hand-drawn X or O glyph inside a grid cell.
- *
- * Purpose: single visual primitive for both committed and tentative placements.
- * State: stateless presentation component.
- * Deps: motion/react for stroke-draw and fade-in animations; CrayonDefs filters
- *       (`crayon-soft`) must exist in the parent <svg>.
- *
- * Note: text is rendered with the Caveat crayon font (--font-display) so the
- * X / O glyphs share the same hand-drawn language as the rest of the UI.
+ * Shape — renders a hand-drawn X or O glyph inside a grid cell using the
+ * shared Caveat crayon font. font-style is forced to normal so glyphs never
+ * render italic.
  */
 import { motion } from "motion/react";
 import type { ShapeKind, Owner } from "@/game/rules";
@@ -57,6 +51,7 @@ export function Shape({
         textAnchor="middle"
         dominantBaseline="central"
         fontFamily="var(--font-display)"
+        fontStyle="normal"
         fontWeight={700}
         fontSize={size * 0.85}
         fill={stroke}
