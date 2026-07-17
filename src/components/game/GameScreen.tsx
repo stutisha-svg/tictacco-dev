@@ -96,11 +96,32 @@ export function GameScreen() {
         tentativeColor={tentativeColor}
       />
 
-      {/* Reveal focus overlay: dim + spotlight sweep + enlarged banner */}
-      <RevealFocus
-        active={state.phase === "revealing"}
+      {/* Enlarged reveal banner (the tile spotlight now lives inside Board). */}
+      <RevealBanner
+        active={state.phase === "revealing" && !state.tieRound}
         collision={!!state.lastReveal?.collision}
       />
+
+      {/* Simultaneous XOX — "It's a tie" badge while scribble plays out. */}
+      <AnimatePresence>
+        {state.tieRound && (
+          <motion.div
+            key="tie-overlay"
+            className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            <div className="absolute inset-0 bg-black/40" />
+            <div className="relative z-10 flex w-full max-w-[460px] flex-col items-center gap-6 px-6">
+              <div className="relative h-[200px] w-full">
+                <WinBadge kind="tie" />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Full-size result badge (shown briefly, then minimized) */}
       <AnimatePresence>
@@ -133,6 +154,7 @@ export function GameScreen() {
     </motion.div>
   );
 }
+
 
 interface BottomBarProps {
   state: ReturnType<typeof useGameEngine>["state"];
