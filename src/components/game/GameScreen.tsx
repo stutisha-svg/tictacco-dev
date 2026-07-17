@@ -39,7 +39,7 @@ export function GameScreen() {
         ? ("you" as const)
         : ("opp" as const);
 
-  const tentativeColor = state.myTentative ? "var(--player-you)" : "var(--ink-soft)";
+  const tentativeColor = "var(--ink)";
 
   const badgeKind: BadgeKind | null =
     state.phase === "won"
@@ -96,11 +96,32 @@ export function GameScreen() {
         tentativeColor={tentativeColor}
       />
 
-      {/* Reveal focus overlay: dim + spotlight sweep + enlarged banner */}
-      <RevealFocus
-        active={state.phase === "revealing"}
+      {/* Enlarged reveal banner (the tile spotlight now lives inside Board). */}
+      <RevealBanner
+        active={state.phase === "revealing" && !state.tieRound}
         collision={!!state.lastReveal?.collision}
       />
+
+      {/* Simultaneous XOX — "It's a tie" badge while scribble plays out. */}
+      <AnimatePresence>
+        {state.tieRound && (
+          <motion.div
+            key="tie-overlay"
+            className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            <div className="absolute inset-0 bg-black/40" />
+            <div className="relative z-10 flex w-full max-w-[460px] flex-col items-center gap-6 px-6">
+              <div className="relative h-[200px] w-full">
+                <WinBadge kind="tie" />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Full-size result badge (shown briefly, then minimized) */}
       <AnimatePresence>
@@ -133,6 +154,7 @@ export function GameScreen() {
     </motion.div>
   );
 }
+
 
 interface BottomBarProps {
   state: ReturnType<typeof useGameEngine>["state"];
@@ -187,75 +209,42 @@ function BottomBar({ state, roundMs, tentativeColor }: BottomBarProps) {
   );
 }
 
-function RevealFocus({ active, collision }: { active: boolean; collision: boolean }) {
+function RevealBanner({ active, collision }: { active: boolean; collision: boolean }) {
   return (
     <AnimatePresence>
       {active && (
-        <>
-          {/* dim + radial spotlight over the board */}
+        <motion.div
+          key="reveal-banner"
+          className="pointer-events-none fixed left-0 right-0 top-[18%] z-30 flex justify-center"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        >
           <motion.div
-            key="reveal-dim"
-            className="pointer-events-none fixed inset-0 z-20"
+            className="rounded-2xl px-6 py-2 text-heading"
             style={{
-              background:
-                "radial-gradient(ellipse 55% 40% at 50% 45%, transparent 45%, rgba(0,0,0,0.55) 90%)",
+              color: "var(--paper)",
+              fontFamily: "var(--font-display)",
+              fontStyle: "normal",
+              background: "rgba(0,0,0,0.65)",
+              textShadow: "0 2px 8px rgba(0,0,0,0.5)",
             }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.35 }}
-          />
-          {/* sweeping warm shine across the board */}
-          <motion.div
-            key="reveal-sweep"
-            className="pointer-events-none fixed inset-0 z-20 overflow-hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            animate={{ scale: [1, 1.06, 1] }}
+            transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
           >
-            <motion.div
-              className="absolute top-1/4 h-1/2 w-1/3"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent 0%, rgba(255, 220, 150, 0.55) 50%, transparent 100%)",
-                mixBlendMode: "screen",
-                filter: "blur(24px)",
-              }}
-              initial={{ x: "-60%" }}
-              animate={{ x: "160%" }}
-              transition={{ duration: 0.9, ease: "easeInOut", repeat: 1 }}
-            />
+            {collision ? "collision — tile wasted" : "revealing…"}
           </motion.div>
-          {/* enlarged banner */}
-          <motion.div
-            key="reveal-banner"
-            className="pointer-events-none fixed left-0 right-0 top-[18%] z-30 flex justify-center"
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <motion.div
-              className="rounded-2xl px-6 py-2 text-heading"
-              style={{
-                color: "var(--paper)",
-                fontFamily: "var(--font-display)",
-                fontStyle: "normal",
-                background: "rgba(0,0,0,0.55)",
-                textShadow: "0 2px 8px rgba(0,0,0,0.5)",
-              }}
-              animate={{ scale: [1, 1.06, 1] }}
-              transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
-            >
-              {collision ? "collision — tile wasted" : "revealing…"}
-            </motion.div>
-          </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );
 }
 
+/**
+ * MinimizedResultCard — inverted card (ink background, beige text) with the
+ * mini result label and the "play again" button.
+ */
 function MinimizedResultCard({
   kind,
   onReset,
@@ -270,7 +259,7 @@ function MinimizedResultCard({
       ? "var(--player-you)"
       : kind === "lose"
         ? "var(--player-opp)"
-        : "var(--ink-soft)";
+        : "var(--paper)";
   return (
     <motion.div
       key="mini-card"
@@ -284,8 +273,8 @@ function MinimizedResultCard({
         className="flex items-center gap-4 rounded-2xl border-2 px-4 py-2.5"
         style={{
           borderColor: "var(--ink)",
-          background: "var(--paper)",
-          boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
+          background: "var(--ink)",
+          boxShadow: "0 10px 24px rgba(0,0,0,0.28)",
         }}
       >
         <div className="flex items-center gap-2">
@@ -297,7 +286,7 @@ function MinimizedResultCard({
           <span
             className="text-body-lg"
             style={{
-              color: "var(--ink)",
+              color: "var(--paper)",
               fontFamily: "var(--font-display)",
               fontStyle: "normal",
               fontWeight: 700,
@@ -312,8 +301,8 @@ function MinimizedResultCard({
           style={{
             fontFamily: "var(--font-display)",
             fontStyle: "normal",
-            borderColor: "var(--ink)",
-            color: "var(--ink)",
+            borderColor: "var(--paper)",
+            color: "var(--paper)",
             background: "transparent",
           }}
         >
@@ -323,3 +312,4 @@ function MinimizedResultCard({
     </motion.div>
   );
 }
+

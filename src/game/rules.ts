@@ -49,17 +49,27 @@ function tileOwner(t: Tile): { owner: Owner; shape: ShapeKind } | null {
 
 /** Did anyone score a literal X-O-X owned by one player? Returns the winning line. */
 export function findWin(board: Board): { owner: Owner; line: number[] } | null {
+  const all = findAllWins(board);
+  return all.length > 0 ? all[0] : null;
+}
+
+/** All simultaneous X-O-X lines on the board (used to detect tie rounds). */
+export function findAllWins(
+  board: Board,
+): { owner: Owner; line: number[] }[] {
+  const out: { owner: Owner; line: number[] }[] = [];
   for (const line of LINES) {
     const owners = line.map((i) => tileOwner(board[i]));
     if (owners.some((o) => o === null)) continue;
     const [a, b, c] = owners as NonNullable<(typeof owners)[number]>[];
     if (a.owner !== b.owner || b.owner !== c.owner) continue;
     if (a.shape === "X" && b.shape === "O" && c.shape === "X") {
-      return { owner: a.owner, line };
+      out.push({ owner: a.owner, line });
     }
   }
-  return null;
+  return out;
 }
+
 
 /**
  * For each player, best progress toward an X-O-X triple: 0..3 positions

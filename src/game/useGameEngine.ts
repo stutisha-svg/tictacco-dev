@@ -6,7 +6,7 @@ import {
   ShapeKind,
   bestProgress,
   emptyBoard,
-  findWin,
+  findAllWins,
 } from "./rules";
 import { selectBotMove } from "./bot";
 
@@ -17,17 +17,21 @@ interface Tentative {
   shape: ShapeKind;
 }
 
+export interface TieRound {
+  /** all 6 (or more) tile indices from both simultaneous XOX lines */
+  tiles: number[];
+  /** the two lines involved */
+  lines: number[][];
+}
+
 export interface GameState {
   board: Board;
   round: number;
   phase: Phase;
-  /** timestamp when the current round's 5s clock started (only after first placement) */
   timerStart: number | null;
   duration: number;
   myTentative: Tentative | null;
-  /** true once the player has placed at least one tentative this round */
   roundStarted: boolean;
-  /** true when player has been idle >8s in placing phase with nothing placed */
   idleWarning: boolean;
   oppMove: Tentative | null;
   lastReveal: {
@@ -36,6 +40,8 @@ export interface GameState {
     collision: boolean;
   } | null;
   winner: { owner: Owner; line: number[] } | null;
+  /** set when both players complete XOX in the same round; game continues */
+  tieRound: TieRound | null;
   progressYou: number;
   progressOpp: number;
 }
@@ -44,10 +50,12 @@ type Action =
   | { type: "tap"; tile: number }
   | { type: "lock"; oppMove: Tentative | null }
   | { type: "nextRound" }
+  | { type: "clearTieRound" }
   | { type: "setIdleWarning"; value: boolean };
 
 const ROUND_MS = 5000;
 const REVEAL_MS = 1800;
+const TIE_HOLD_MS = 2200;
 const IDLE_WARN_MS = 8000;
 
 const initial = (): GameState => ({
@@ -62,6 +70,7 @@ const initial = (): GameState => ({
   oppMove: null,
   lastReveal: null,
   winner: null,
+  tieRound: null,
   progressYou: 0,
   progressOpp: 0,
 });
@@ -84,7 +93,6 @@ function reducer(state: GameState, action: Action): GameState {
           : null;
       const next = cycleShape(prev);
       if (next === "clear") {
-        // tentative cleared; keep roundStarted true if timer already running
         return { ...state, myTentative: null };
       }
       const startingNow = !state.roundStarted;
@@ -99,6 +107,9 @@ function reducer(state: GameState, action: Action): GameState {
     case "setIdleWarning": {
       if (state.phase !== "placing") return state;
       return { ...state, idleWarning: action.value };
+    }
+    case "clearTieRound": {
+      return { ...state, tieRound: null };
     }
     case "lock": {
       const board = state.board.map((t) => ({
@@ -115,30 +126,59 @@ function reducer(state: GameState, action: Action): GameState {
       if (mine && opp && mine.tile === opp.tile) {
         push(mine.tile, { owner: "you", shape: mine.shape });
         push(mine.tile, { owner: "opp", shape: opp.shape });
-        board[mine.tile] = { ...board[mine.tile], dead: true, placements: board[mine.tile].placements };
+        board[mine.tile] = { ...board[mine.tile], dead: true };
         collision = true;
       } else {
         if (mine) push(mine.tile, { owner: "you", shape: mine.shape });
         if (opp) push(opp.tile, { owner: "opp", shape: opp.shape });
       }
 
-      const win = findWin(board);
+      const wins = findAllWins(board);
+      const owners = new Set(wins.map((w) => w.owner));
+      const isTieRound = wins.length >= 2 && owners.size === 2;
+
+      let phase: Phase = "revealing";
+      let winner: { owner: Owner; line: number[] } | null = null;
+      let tieRound: TieRound | null = null;
+
+      if (isTieRound) {
+        // Wipe all winning tiles — game continues.
+        const tiles = Array.from(new Set(wins.flatMap((w) => w.line)));
+        tieRound = { tiles, lines: wins.map((w) => w.line) };
+        // We DON'T mark tiles dead yet — the reveal animation shades them
+        // first, then draws scribbles. We'll mark them dead after the tie
+        // animation completes via nextRound.
+        phase = "revealing";
+      } else if (wins.length > 0) {
+        phase = "won";
+        winner = wins[0];
+      }
+
       return {
         ...state,
         board,
-        phase: win ? "won" : "revealing",
+        phase,
         myTentative: null,
         oppMove: opp,
         lastReveal: { mine, opp, collision },
-        winner: win,
+        winner,
+        tieRound,
         progressYou: bestProgress(board, "you"),
         progressOpp: bestProgress(board, "opp"),
       };
     }
     case "nextRound": {
       if (state.phase === "won") return state;
+      let board = state.board;
+      // If this round was a tie, mark all tie tiles dead now.
+      if (state.tieRound) {
+        board = board.map((t, i) =>
+          state.tieRound!.tiles.includes(i) ? { ...t, dead: true } : t,
+        );
+      }
       return {
         ...state,
+        board,
         phase: "placing",
         round: state.round + 1,
         timerStart: null,
@@ -146,6 +186,9 @@ function reducer(state: GameState, action: Action): GameState {
         idleWarning: false,
         duration: ROUND_MS,
         oppMove: null,
+        tieRound: null,
+        progressYou: bestProgress(board, "you"),
+        progressOpp: bestProgress(board, "opp"),
       };
     }
   }
@@ -161,7 +204,10 @@ export function useGameEngine() {
     if (state.phase !== "placing" || !state.roundStarted) return;
     const t = setTimeout(() => {
       const s = stateRef.current;
-      const opp = selectBotMove(s.board, "opp");
+      const opp = selectBotMove(s.board, "opp", {
+        playerTentative: s.myTentative,
+        collisionBias: 0.4,
+      });
       dispatch({ type: "lock", oppMove: opp });
     }, ROUND_MS);
     return () => clearTimeout(t);
@@ -181,12 +227,13 @@ export function useGameEngine() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.phase, state.round, state.roundStarted]);
 
-  // reveal -> next round
+  // reveal -> next round (longer for tie rounds so animation can play)
   useEffect(() => {
     if (state.phase !== "revealing") return;
-    const t = setTimeout(() => dispatch({ type: "nextRound" }), REVEAL_MS + 400);
+    const wait = state.tieRound ? REVEAL_MS + TIE_HOLD_MS : REVEAL_MS + 400;
+    const t = setTimeout(() => dispatch({ type: "nextRound" }), wait);
     return () => clearTimeout(t);
-  }, [state.phase, state.round]);
+  }, [state.phase, state.round, state.tieRound]);
 
   const tap = useCallback((tile: number) => dispatch({ type: "tap", tile }), []);
   const reset = useCallback(() => {

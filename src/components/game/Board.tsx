@@ -68,38 +68,63 @@ export function Board({ state, onTap, boardPx }: Props) {
             key={p.key}
             d={p.d}
             stroke="var(--ink)"
-            strokeOpacity={0.6}
-            strokeWidth={2.4}
+            strokeOpacity={0.65}
+            strokeWidth={3}
             strokeLinecap="round"
             fill="none"
             initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 0.6 }}
+            animate={{ pathLength: 1, opacity: 0.65 }}
             transition={{ duration: 0.5, delay: i * 0.015 }}
           />
         ))}
       </g>
 
-      {/* Skeletal reveal — thicker pulse along the same straight grid. */}
+      {/* Focused reveal spotlight — only around the opponent's tile so the
+          rest of the board stays readable and not visually distracting. */}
       <AnimatePresence>
-        {revealing && (
-          <g style={{ pointerEvents: "none" }} filter="url(#crayon-rough)">
-            {gridPaths.map((p, i) => (
-              <motion.path
-                key={`sk-${p.key}`}
-                d={p.d}
-                stroke="var(--player-you)"
-                strokeWidth={3.6}
-                strokeLinecap="round"
+        {revealing && state.oppMove && (() => {
+          const oi = state.oppMove.tile;
+          const or = Math.floor(oi / SIZE);
+          const oc = oi % SIZE;
+          const cx = oc * cell + cell / 2;
+          const cy = or * cell + cell / 2;
+          const rInner = cell * 0.7;
+          const rOuter = cell * 1.4;
+          return (
+            <motion.g
+              key="opp-spot"
+              style={{ pointerEvents: "none" }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <defs>
+                <radialGradient id="opp-spot-grad" cx={cx} cy={cy} r={rOuter} gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="rgba(0,0,0,0)" />
+                  <stop offset={`${(rInner / rOuter) * 100}%`} stopColor="rgba(0,0,0,0)" />
+                  <stop offset="100%" stopColor="rgba(0,0,0,0.45)" />
+                </radialGradient>
+              </defs>
+              <rect x={0} y={0} width={boardPx} height={boardPx} fill="url(#opp-spot-grad)" />
+              {/* subtle warm ring around the target tile */}
+              <motion.circle
+                cx={cx}
+                cy={cy}
+                r={rInner}
                 fill="none"
-                initial={{ pathLength: 0, opacity: 0.95 }}
-                animate={{ pathLength: 1, opacity: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.9, delay: (i % 9) * 0.04, ease: "easeOut" }}
+                stroke="rgba(255,220,150,0.7)"
+                strokeWidth={2}
+                initial={{ scale: 1.3, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.4 }}
+                style={{ transformOrigin: `${cx}px ${cy}px` }}
               />
-            ))}
-          </g>
-        )}
+            </motion.g>
+          );
+        })()}
       </AnimatePresence>
+
 
       {/* tiles content */}
       {state.board.map((tile, i) => {
@@ -111,6 +136,14 @@ export function Board({ state, onTap, boardPx }: Props) {
         const isOppReveal = state.oppMove?.tile === i && revealing;
         const inWin = winSet.has(i);
 
+        // Tie-round: this tile is one of the "both won" tiles. Owner
+        // determined by which placement is on the tile.
+        const tieIdx = state.tieRound?.tiles.indexOf(i) ?? -1;
+        const isTieTile = tieIdx >= 0;
+        const tieOwner: "you" | "opp" | null = isTieTile
+          ? tile.placements[0]?.owner ?? null
+          : null;
+
         return (
           <g key={i} transform={`translate(${x}, ${y})`} style={{ pointerEvents: "none" }}>
             {inWin && (
@@ -118,11 +151,28 @@ export function Board({ state, onTap, boardPx }: Props) {
                 width={cell}
                 height={cell}
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 0.55 }}
+                animate={{ opacity: 0.35 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
                 style={{
                   fill:
                     state.winner?.owner === "you"
+                      ? "var(--player-you)"
+                      : "var(--player-opp)",
+                }}
+              />
+            )}
+
+            {/* Tie-round shading — one tile at a time, then scribble on top. */}
+            {isTieTile && (
+              <motion.rect
+                width={cell}
+                height={cell}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.32 }}
+                transition={{ duration: 0.25, delay: 0.2 + tieIdx * 0.12 }}
+                style={{
+                  fill:
+                    tieOwner === "you"
                       ? "var(--player-you)"
                       : "var(--player-opp)",
                 }}
@@ -138,12 +188,23 @@ export function Board({ state, onTap, boardPx }: Props) {
                 size={cell}
                 seed={i * 7 + k}
                 draw={isOppReveal && p.owner === "opp"}
-                delay={isOppReveal && p.owner === "opp" ? 0.7 : 0}
+                delay={isOppReveal && p.owner === "opp" ? 0.5 : 0}
               />
             ))}
 
             {/* collision → smoke scribble on top */}
             {tile.dead && <SmokeScribble size={cell} seed={i} />}
+
+            {/* tie-round scribble — sequentially, AFTER shading */}
+            {isTieTile && (
+              <motion.g
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 + tieIdx * 0.14, duration: 0.1 }}
+              >
+                <SmokeScribble size={cell} seed={i + 100} />
+              </motion.g>
+            )}
 
             {/* my tentative preview */}
             {tent && !tile.dead && tile.placements.length === 0 && (
@@ -169,3 +230,4 @@ export function Board({ state, onTap, boardPx }: Props) {
     </svg>
   );
 }
+

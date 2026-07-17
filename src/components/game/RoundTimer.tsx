@@ -1,22 +1,21 @@
 /**
- * RoundTimer — rounded-rectangle progress bar filled with a crayon squiggle.
+ * RoundTimer — rounded-rectangle progress bar that fills left→right with a
+ * chunky, hand-drawn crayon squiggle.
  *
- * Purpose: shows time remaining for the current 5s round.
- * State: local RAF-driven percentage; restarts when `keyId` changes AND
- *        `running` flips to true.
- * Deps: none.
- *
- * Visual: hand-drawn rounded-rect outline; inside, a zigzag crayon stroke
- * spans the full width. A left-anchored clip reveals more of the squiggle
- * as time elapses, so the bar "fills up" without changing the underlying
- * squiggle path.
+ * Rules:
+ *  - Bar starts fully EMPTY (no ghost track); the squiggle is drawn as time
+ *    elapses via a left-anchored clip revealing a heavily textured path.
+ *  - Fill color is always black ink so it never clashes with player colors.
+ *  - `running` starts the RAF when it first flips true for the current
+ *    `keyId`. Resetting `keyId` returns the bar to empty.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 
 interface RoundTimerProps {
   running: boolean;
   duration: number;
-  color: string;
+  /** kept for API compat, ignored — squiggle is always ink black */
+  color?: string;
   keyId: number;
   idleWarning?: boolean;
 }
@@ -26,17 +25,20 @@ const BAR_HEIGHT = 26;
 const PAD_X = 10;
 const RADIUS = 12;
 
-/** Build a dense zigzag squiggle path spanning the usable width. */
+/** Rough zigzag squiggle across the usable width — dense + jittered. */
 function buildZigZagPath(usableWidth: number, seed: number): string {
   const midY = BAR_HEIGHT / 2;
-  const amp = 5;
-  const step = 8;
-  const count = Math.max(4, Math.floor(usableWidth / step));
-  const j = (n: number) => ((Math.sin(seed * 12.9 + n * 4.7) * 43758.5) % 1) * 1.2;
+  const amp = 6;
+  const step = 6;
+  const count = Math.max(6, Math.floor(usableWidth / step));
+  const j = (n: number) => {
+    const v = Math.sin(seed * 12.9 + n * 4.7) * 43758.5;
+    return (v - Math.floor(v)) * 2 - 1;
+  };
   let d = `M ${PAD_X} ${midY}`;
   for (let i = 1; i <= count; i++) {
-    const x = PAD_X + (usableWidth * i) / count;
-    const y = midY + (i % 2 === 0 ? -amp : amp) + j(i);
+    const x = PAD_X + (usableWidth * i) / count + j(i) * 1.2;
+    const y = midY + (i % 2 === 0 ? -amp : amp) + j(i + 3) * 1.5;
     d += ` L ${x} ${y}`;
   }
   return d;
@@ -45,7 +47,6 @@ function buildZigZagPath(usableWidth: number, seed: number): string {
 export function RoundTimer({
   running,
   duration,
-  color,
   keyId,
   idleWarning,
 }: RoundTimerProps) {
@@ -54,7 +55,6 @@ export function RoundTimer({
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // reset whenever the round changes
     setPct(0);
     startRef.current = null;
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -62,7 +62,6 @@ export function RoundTimer({
 
   useEffect(() => {
     if (!running) return;
-    // start the clock the first time we become "running" for this key
     if (startRef.current === null) startRef.current = Date.now();
     const tick = () => {
       const start = startRef.current!;
@@ -94,22 +93,23 @@ export function RoundTimer({
         aria-label="round timer"
       >
         <defs>
-          <filter id="timer-rough" x="-5%" y="-30%" width="110%" height="160%">
+          {/* Outline: light grain so the rectangle stays readable */}
+          <filter id="timer-outline" x="-5%" y="-30%" width="110%" height="160%">
             <feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="2" seed="4" />
             <feDisplacementMap in="SourceGraphic" scale="1.1" />
           </filter>
+          {/* Fill squiggle: heavy grain — feels like a real crayon stroke */}
+          <filter id="timer-scribble" x="-5%" y="-40%" width="110%" height="180%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="3" seed="17" />
+            <feDisplacementMap in="SourceGraphic" scale="3.4" />
+          </filter>
           <clipPath id="timer-fill-clip">
-            <rect
-              x={PAD_X}
-              y={0}
-              width={clipWidth}
-              height={BAR_HEIGHT}
-            />
+            <rect x={PAD_X} y={0} width={clipWidth} height={BAR_HEIGHT} />
           </clipPath>
         </defs>
 
-        <g filter="url(#timer-rough)">
-          {/* Outline rounded rectangle — hand drawn */}
+        {/* Outline rounded rectangle — hand drawn, empty bar */}
+        <g filter="url(#timer-outline)">
           <rect
             x={2}
             y={2}
@@ -122,30 +122,29 @@ export function RoundTimer({
             strokeWidth={idleWarning ? 3.2 : 2.5}
             strokeLinecap="round"
             strokeDasharray={idle && !idleWarning ? "6 5" : undefined}
-            opacity={idleWarning ? 0.95 : 0.85}
+            opacity={idleWarning ? 0.95 : 0.9}
           />
+        </g>
 
-          {/* Faint full-length ghost squiggle so users see the track */}
+        {/* Chunky ink squiggle — grows left→right, no pre-existing ghost */}
+        <g clipPath="url(#timer-fill-clip)" filter="url(#timer-scribble)">
+          {/* double-stroke for extra crayon weight */}
           <path
             d={zigZagPath}
             stroke="var(--ink)"
-            strokeOpacity={0.18}
-            strokeWidth={4}
+            strokeWidth={7}
             strokeLinecap="round"
             fill="none"
+            opacity={0.95}
           />
-
-          {/* Filled squiggle — same path, revealed left-to-right by the clip */}
-          <g clipPath="url(#timer-fill-clip)">
-            <path
-              d={zigZagPath}
-              stroke={color}
-              strokeWidth={6}
-              strokeLinecap="round"
-              fill="none"
-              opacity={0.95}
-            />
-          </g>
+          <path
+            d={zigZagPath}
+            stroke="var(--ink)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            fill="none"
+            opacity={0.7}
+          />
         </g>
       </svg>
     </div>
