@@ -2,6 +2,14 @@
 @source "../src";
 @import "tw-animate-css";
 
+@font-face {
+  font-family: "Crayon Libre";
+  src: url("/fonts/CrayonLibre.ttf") format("truetype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -22,8 +30,8 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
-  --font-hand: "Caveat", "Patrick Hand", cursive;
-  --font-display: "Caveat", "Patrick Hand", cursive;
+  --font-hand: "Crayon Libre", "Caveat", "Patrick Hand", cursive;
+  --font-display: "Crayon Libre", "Caveat", "Patrick Hand", cursive;
 }
 
 :root {
