@@ -40,11 +40,12 @@ export function Shape({
   return (
     <motion.g
       style={{ opacity, transformOrigin: `${size / 2}px ${size / 2}px` }}
-      initial={draw ? { scale: 0.6, opacity: 0 } : false}
+      initial={draw ? { scale: 0.85, opacity: 0.15 } : false}
       animate={{ scale: 1, opacity }}
-      transition={{ duration: 0.35, delay, ease: "easeOut" }}
+      transition={{ duration: 0.55, delay, ease: "easeOut" }}
       filter="url(#crayon-soft)"
     >
+
       <text
         x={size / 2 + dx}
         y={size / 2 + dy}
