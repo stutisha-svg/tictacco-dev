@@ -136,6 +136,14 @@ export function Board({ state, onTap, boardPx }: Props) {
         const isOppReveal = state.oppMove?.tile === i && revealing;
         const inWin = winSet.has(i);
 
+        // Tie-round: this tile is one of the "both won" tiles. Owner
+        // determined by which placement is on the tile.
+        const tieIdx = state.tieRound?.tiles.indexOf(i) ?? -1;
+        const isTieTile = tieIdx >= 0;
+        const tieOwner: "you" | "opp" | null = isTieTile
+          ? tile.placements[0]?.owner ?? null
+          : null;
+
         return (
           <g key={i} transform={`translate(${x}, ${y})`} style={{ pointerEvents: "none" }}>
             {inWin && (
@@ -143,11 +151,28 @@ export function Board({ state, onTap, boardPx }: Props) {
                 width={cell}
                 height={cell}
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 0.55 }}
+                animate={{ opacity: 0.35 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
                 style={{
                   fill:
                     state.winner?.owner === "you"
+                      ? "var(--player-you)"
+                      : "var(--player-opp)",
+                }}
+              />
+            )}
+
+            {/* Tie-round shading — one tile at a time, then scribble on top. */}
+            {isTieTile && (
+              <motion.rect
+                width={cell}
+                height={cell}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.32 }}
+                transition={{ duration: 0.25, delay: 0.2 + tieIdx * 0.12 }}
+                style={{
+                  fill:
+                    tieOwner === "you"
                       ? "var(--player-you)"
                       : "var(--player-opp)",
                 }}
@@ -163,12 +188,23 @@ export function Board({ state, onTap, boardPx }: Props) {
                 size={cell}
                 seed={i * 7 + k}
                 draw={isOppReveal && p.owner === "opp"}
-                delay={isOppReveal && p.owner === "opp" ? 0.7 : 0}
+                delay={isOppReveal && p.owner === "opp" ? 0.5 : 0}
               />
             ))}
 
             {/* collision → smoke scribble on top */}
             {tile.dead && <SmokeScribble size={cell} seed={i} />}
+
+            {/* tie-round scribble — sequentially, AFTER shading */}
+            {isTieTile && (
+              <motion.g
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 + tieIdx * 0.14, duration: 0.1 }}
+              >
+                <SmokeScribble size={cell} seed={i + 100} />
+              </motion.g>
+            )}
 
             {/* my tentative preview */}
             {tent && !tile.dead && tile.placements.length === 0 && (
@@ -194,3 +230,4 @@ export function Board({ state, onTap, boardPx }: Props) {
     </svg>
   );
 }
+
