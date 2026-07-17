@@ -61,8 +61,14 @@ export function Crown({ color, size = 44 }: CrownProps) {
           strokeLinejoin="round"
           fill="none"
           initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 1 }}
-          transition={{ duration: 0.75, ease: "easeOut" }}
+          animate={{ pathLength: [0, 1, 1, 0], opacity: [0, 1, 1, 0.15] }}
+          transition={{
+            duration: 2.4,
+            times: [0, 0.55, 0.85, 1],
+            repeat: Infinity,
+            repeatDelay: 0.4,
+            ease: "easeInOut",
+          }}
         />
         {gems.map((g, i) => (
           <motion.circle
@@ -74,12 +80,19 @@ export function Crown({ color, size = 44 }: CrownProps) {
             stroke="var(--ink)"
             strokeWidth={1}
             initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.75 + i * 0.08, duration: 0.25, ease: "backOut" }}
+            animate={{ scale: [0, 1, 1, 0], opacity: [0, 1, 1, 0] }}
+            transition={{
+              duration: 2.4,
+              times: [0, 0.6 + i * 0.03, 0.85, 1],
+              repeat: Infinity,
+              repeatDelay: 0.4,
+              ease: "easeInOut",
+            }}
             style={{ transformOrigin: `${g.cx}px ${g.cy}px` }}
           />
         ))}
       </g>
+
     </svg>
   );
 }
