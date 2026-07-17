@@ -39,7 +39,7 @@ export function GameScreen() {
         ? ("you" as const)
         : ("opp" as const);
 
-  const tentativeColor = state.myTentative ? "var(--player-you)" : "var(--ink-soft)";
+  const tentativeColor = "var(--ink)";
 
   const badgeKind: BadgeKind | null =
     state.phase === "won"
