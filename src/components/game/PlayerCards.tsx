@@ -10,6 +10,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { XoxIndicator } from "./XoxIndicator";
 import { Crown } from "./Crown";
 import type { Owner } from "@/game/rules";
+import type { MatchScore } from "@/game/useGameEngine";
 
 interface PlayerCardsProps {
   progressYou: number;
@@ -17,6 +18,8 @@ interface PlayerCardsProps {
   leader: Owner | null;
   /** Set to the winning owner AFTER the badge minimizes; renders the crown. */
   crownedWinner?: Owner | null;
+  match: MatchScore;
+  matchTarget: number;
 }
 
 interface AvatarProps {
