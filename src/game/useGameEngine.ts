@@ -18,10 +18,13 @@ interface Tentative {
 }
 
 export interface TieRound {
-  /** all 6 (or more) tile indices from both simultaneous XOX lines */
   tiles: number[];
-  /** the two lines involved */
   lines: number[][];
+}
+
+export interface MatchScore {
+  you: number;
+  opp: number;
 }
 
 export interface GameState {
@@ -40,10 +43,12 @@ export interface GameState {
     collision: boolean;
   } | null;
   winner: { owner: Owner; line: number[] } | null;
-  /** set when both players complete XOX in the same round; game continues */
   tieRound: TieRound | null;
   progressYou: number;
   progressOpp: number;
+  match: MatchScore;
+  matchTarget: number;
+  matchOver: boolean;
 }
 
 type Action =
@@ -51,12 +56,14 @@ type Action =
   | { type: "lock"; oppMove: Tentative | null }
   | { type: "nextRound" }
   | { type: "clearTieRound" }
-  | { type: "setIdleWarning"; value: boolean };
+  | { type: "setIdleWarning"; value: boolean }
+  | { type: "softReset" };
 
 const ROUND_MS = 5000;
 const REVEAL_MS = 1800;
 const TIE_HOLD_MS = 2200;
 const IDLE_WARN_MS = 8000;
+const MATCH_TARGET = 2; // best of 3
 
 const initial = (): GameState => ({
   board: emptyBoard(),
@@ -73,6 +80,9 @@ const initial = (): GameState => ({
   tieRound: null,
   progressYou: 0,
   progressOpp: 0,
+  match: { you: 0, opp: 0 },
+  matchTarget: MATCH_TARGET,
+  matchOver: false,
 });
 
 function cycleShape(prev: ShapeKind | null): ShapeKind | "clear" {
@@ -140,18 +150,22 @@ function reducer(state: GameState, action: Action): GameState {
       let phase: Phase = "revealing";
       let winner: { owner: Owner; line: number[] } | null = null;
       let tieRound: TieRound | null = null;
+      let match = state.match;
+      let matchOver = state.matchOver;
 
       if (isTieRound) {
-        // Wipe all winning tiles — game continues.
         const tiles = Array.from(new Set(wins.flatMap((w) => w.line)));
         tieRound = { tiles, lines: wins.map((w) => w.line) };
-        // We DON'T mark tiles dead yet — the reveal animation shades them
-        // first, then draws scribbles. We'll mark them dead after the tie
-        // animation completes via nextRound.
         phase = "revealing";
       } else if (wins.length > 0) {
         phase = "won";
         winner = wins[0];
+        match = {
+          you: state.match.you + (winner.owner === "you" ? 1 : 0),
+          opp: state.match.opp + (winner.owner === "opp" ? 1 : 0),
+        };
+        matchOver =
+          match.you >= state.matchTarget || match.opp >= state.matchTarget;
       }
 
       return {
@@ -165,12 +179,13 @@ function reducer(state: GameState, action: Action): GameState {
         tieRound,
         progressYou: bestProgress(board, "you"),
         progressOpp: bestProgress(board, "opp"),
+        match,
+        matchOver,
       };
     }
     case "nextRound": {
       if (state.phase === "won") return state;
       let board = state.board;
-      // If this round was a tie, mark all tie tiles dead now.
       if (state.tieRound) {
         board = board.map((t, i) =>
           state.tieRound!.tiles.includes(i) ? { ...t, dead: true } : t,
@@ -191,6 +206,15 @@ function reducer(state: GameState, action: Action): GameState {
         progressOpp: bestProgress(board, "opp"),
       };
     }
+    case "softReset": {
+      // If match is over, wipe match wins too; else keep them and start next game.
+      const keepMatch = !state.matchOver;
+      return {
+        ...initial(),
+        match: keepMatch ? state.match : { you: 0, opp: 0 },
+        matchTarget: state.matchTarget,
+      };
+    }
   }
 }
 
@@ -199,7 +223,6 @@ export function useGameEngine() {
   const stateRef = useRef(state);
   stateRef.current = state;
 
-  // Round timer: only starts once the player has placed a tentative.
   useEffect(() => {
     if (state.phase !== "placing" || !state.roundStarted) return;
     const t = setTimeout(() => {
@@ -213,7 +236,6 @@ export function useGameEngine() {
     return () => clearTimeout(t);
   }, [state.phase, state.round, state.roundStarted]);
 
-  // Idle-warning: nudge after 8s of no placement.
   useEffect(() => {
     if (state.phase !== "placing" || state.roundStarted) {
       if (state.idleWarning) dispatch({ type: "setIdleWarning", value: false });
@@ -227,7 +249,6 @@ export function useGameEngine() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.phase, state.round, state.roundStarted]);
 
-  // reveal -> next round (longer for tie rounds so animation can play)
   useEffect(() => {
     if (state.phase !== "revealing") return;
     const wait = state.tieRound ? REVEAL_MS + TIE_HOLD_MS : REVEAL_MS + 400;
@@ -236,9 +257,7 @@ export function useGameEngine() {
   }, [state.phase, state.round, state.tieRound]);
 
   const tap = useCallback((tile: number) => dispatch({ type: "tap", tile }), []);
-  const reset = useCallback(() => {
-    window.location.reload();
-  }, []);
+  const reset = useCallback(() => dispatch({ type: "softReset" }), []);
 
   return { state, tap, reset, roundMs: ROUND_MS, revealMs: REVEAL_MS };
 }
