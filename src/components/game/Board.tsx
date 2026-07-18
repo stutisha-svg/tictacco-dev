@@ -79,8 +79,8 @@ export function Board({ state, onTap, boardPx }: Props) {
         ))}
       </g>
 
-      {/* Focused reveal spotlight — only around the opponent's tile so the
-          rest of the board stays readable and not visually distracting. */}
+      {/* Focused reveal spotlight — soft radial darkening around the
+          opponent's tile only. No ring drawn on the tile itself. */}
       <AnimatePresence>
         {revealing && state.oppMove && (() => {
           const oi = state.oppMove.tile;
@@ -88,8 +88,8 @@ export function Board({ state, onTap, boardPx }: Props) {
           const oc = oi % SIZE;
           const cx = oc * cell + cell / 2;
           const cy = or * cell + cell / 2;
-          const rInner = cell * 0.7;
-          const rOuter = cell * 1.4;
+          const rInner = cell * 0.75;
+          const rOuter = cell * 1.6;
           return (
             <motion.g
               key="opp-spot"
@@ -107,23 +107,12 @@ export function Board({ state, onTap, boardPx }: Props) {
                 </radialGradient>
               </defs>
               <rect x={0} y={0} width={boardPx} height={boardPx} fill="url(#opp-spot-grad)" />
-              {/* subtle warm ring around the target tile */}
-              <motion.circle
-                cx={cx}
-                cy={cy}
-                r={rInner}
-                fill="none"
-                stroke="rgba(255,220,150,0.7)"
-                strokeWidth={2}
-                initial={{ scale: 1.3, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.4 }}
-                style={{ transformOrigin: `${cx}px ${cy}px` }}
-              />
             </motion.g>
           );
         })()}
       </AnimatePresence>
+
+
 
 
       {/* tiles content */}
@@ -136,13 +125,17 @@ export function Board({ state, onTap, boardPx }: Props) {
         const isOppReveal = state.oppMove?.tile === i && revealing;
         const inWin = winSet.has(i);
 
-        // Tie-round: this tile is one of the "both won" tiles. Owner
-        // determined by which placement is on the tile.
+        // Tie-round shading persists after tiles are marked dead. A
+        // "tie-dead" tile has exactly one placement + dead=true. A collision-
+        // dead tile has two placements.
         const tieIdx = state.tieRound?.tiles.indexOf(i) ?? -1;
-        const isTieTile = tieIdx >= 0;
+        const isTieActive = tieIdx >= 0;
+        const isTieDead = tile.dead && tile.placements.length === 1;
+        const isTieTile = isTieActive || isTieDead;
         const tieOwner: "you" | "opp" | null = isTieTile
           ? tile.placements[0]?.owner ?? null
           : null;
+        const isCollision = tile.dead && tile.placements.length >= 2;
 
         return (
           <g key={i} transform={`translate(${x}, ${y})`} style={{ pointerEvents: "none" }}>
@@ -151,7 +144,7 @@ export function Board({ state, onTap, boardPx }: Props) {
                 width={cell}
                 height={cell}
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 0.35 }}
+                animate={{ opacity: 0.4 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
                 style={{
                   fill:
@@ -162,14 +155,18 @@ export function Board({ state, onTap, boardPx }: Props) {
               />
             )}
 
-            {/* Tie-round shading — one tile at a time, then scribble on top. */}
+            {/* Tie-tile base shading — sequential during the tie reveal, then
+                persists at the lighter shade after tiles are locked. */}
             {isTieTile && (
               <motion.rect
                 width={cell}
                 height={cell}
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 0.32 }}
-                transition={{ duration: 0.25, delay: 0.2 + tieIdx * 0.12 }}
+                animate={{ opacity: 0.2 }}
+                transition={{
+                  duration: 0.35,
+                  delay: isTieActive ? 0.15 + Math.max(0, tieIdx) * 0.1 : 0,
+                }}
                 style={{
                   fill:
                     tieOwner === "you"
@@ -192,19 +189,14 @@ export function Board({ state, onTap, boardPx }: Props) {
               />
             ))}
 
-            {/* collision → smoke scribble on top */}
-            {tile.dead && <SmokeScribble size={cell} seed={i} />}
+            {/* collision → smoke scribble on top (immediate) */}
+            {isCollision && <SmokeScribble size={cell} seed={i} />}
 
-            {/* tie-round scribble — sequentially, AFTER shading */}
-            {isTieTile && (
-              <motion.g
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 + tieIdx * 0.14, duration: 0.1 }}
-              >
-                <SmokeScribble size={cell} seed={i + 100} />
-              </motion.g>
-            )}
+            {/* tie-dead → scribble draws AFTER the tie badge exits (i.e.
+                only once the tile becomes dead in the next round). */}
+            {isTieDead && <SmokeScribble size={cell} seed={i + 100} />}
+
+
 
             {/* my tentative preview */}
             {tent && !tile.dead && tile.placements.length === 0 && (

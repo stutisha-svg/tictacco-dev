@@ -10,6 +10,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { XoxIndicator } from "./XoxIndicator";
 import { Crown } from "./Crown";
 import type { Owner } from "@/game/rules";
+import type { MatchScore } from "@/game/useGameEngine";
 
 interface PlayerCardsProps {
   progressYou: number;
@@ -17,6 +18,8 @@ interface PlayerCardsProps {
   leader: Owner | null;
   /** Set to the winning owner AFTER the badge minimizes; renders the crown. */
   crownedWinner?: Owner | null;
+  match: MatchScore;
+  matchTarget: number;
 }
 
 interface AvatarProps {
@@ -143,9 +146,9 @@ function Avatar({ name, glyph, owner, active, crowned }: AvatarProps) {
                 strokeWidth={3.5}
               />
               {glyph === "bug" ? (
-                <BugGlyph size={size} color="var(--ink)" />
+                <BugGlyph size={size} color={color} />
               ) : (
-                <RocketGlyph size={size} color="var(--ink)" />
+                <RocketGlyph size={size} color={color} />
               )}
             </g>
           </svg>
@@ -163,6 +166,8 @@ export function PlayerCards({
   progressOpp,
   leader,
   crownedWinner,
+  match,
+  matchTarget,
 }: PlayerCardsProps) {
   return (
     <div className="flex w-full items-start justify-between px-4 pt-6">
@@ -178,6 +183,8 @@ export function PlayerCards({
           progressYou={progressYou}
           progressOpp={progressOpp}
           leader={leader}
+          match={match}
+          matchTarget={matchTarget}
         />
         <div className="mt-1 text-body-sm" style={{ color: "var(--ink-soft)" }}>
           first one to X-O-X wins!

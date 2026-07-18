@@ -50,19 +50,19 @@ function buildSmokePath(size: number, seed: number): string {
 
 export function SmokeScribble({ size, seed = 0 }: Props) {
   const d = buildSmokePath(size, seed);
-  const sw = Math.max(2.5, size * 0.09);
+  const sw = Math.max(2, size * 0.075);
   return (
     <g filter="url(#crayon-rough)" style={{ pointerEvents: "none" }}>
       <motion.path
         d={d}
-        stroke="var(--dead)"
+        stroke="var(--ink-soft)"
         strokeWidth={sw}
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
         initial={{ pathLength: 0, opacity: 0 }}
-        animate={{ pathLength: 1, opacity: 0.92 }}
-        transition={{ duration: 0.55, delay: 0.55, ease: "easeOut" }}
+        animate={{ pathLength: 1, opacity: 0.6 }}
+        transition={{ duration: 0.7, delay: 0.4, ease: "easeOut" }}
       />
     </g>
   );
