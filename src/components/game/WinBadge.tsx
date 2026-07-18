@@ -96,9 +96,9 @@ export function WinBadge({ kind }: WinBadgeProps) {
             y={height / 2 - 8}
             textAnchor="middle"
             dominantBaseline="central"
-            fontFamily="var(--font-display)"
+            fontFamily={BADGE_FONT}
             fontWeight={700}
-            fontSize={54}
+            fontSize={64}
             fill={config.fillVar}
             stroke="var(--ink)"
             strokeWidth={1.5}
@@ -108,11 +108,11 @@ export function WinBadge({ kind }: WinBadgeProps) {
           </text>
           <text
             x={width / 2}
-            y={height / 2 + 40}
+            y={height / 2 + 44}
             textAnchor="middle"
             dominantBaseline="central"
-            fontFamily="var(--font-display)"
-            fontSize={22}
+            fontFamily={BADGE_FONT}
+            fontSize={26}
             fill="var(--ink)"
           >
             {config.subtitle}
@@ -120,5 +120,63 @@ export function WinBadge({ kind }: WinBadgeProps) {
         </svg>
       </motion.div>
     </motion.div>
+  );
+}
+
+/**
+ * MiniBadge — reduced-size version of the WinBadge, for the persistent
+ * "play again" card. Reuses the ribbon graphics so it feels like the same
+ * artifact minimizing down.
+ */
+export function MiniBadge({ kind }: WinBadgeProps) {
+  const config = BADGE_CONFIG[kind];
+  const width = 180;
+  const height = 96;
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      className="overflow-visible"
+    >
+      <defs>
+        <filter id="mini-badge-rough" x="-10%" y="-10%" width="120%" height="120%">
+          <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="7" />
+          <feDisplacementMap in="SourceGraphic" scale="1.6" />
+        </filter>
+      </defs>
+      <g filter="url(#mini-badge-rough)">
+        <path
+          d={`M 10 20 L ${width - 10} 16 L ${width - 16} ${height - 14} L 16 ${height - 10} Z`}
+          fill="var(--paper)"
+          stroke="var(--ink)"
+          strokeWidth={3}
+          strokeLinejoin="round"
+        />
+        <path
+          d={`M 18 28 L ${width - 18} 24 L ${width - 24} ${height - 22} L 24 ${height - 18} Z`}
+          fill="none"
+          stroke={config.fillVar}
+          strokeWidth={2}
+          strokeDasharray="5 4"
+        />
+      </g>
+      <text
+        x={width / 2}
+        y={height / 2 + 2}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontFamily={BADGE_FONT}
+        fontWeight={700}
+        fontSize={30}
+        fill={config.fillVar}
+        stroke="var(--ink)"
+        strokeWidth={1}
+        paintOrder="stroke"
+        transform={`rotate(${config.tilt / 2} ${width / 2} ${height / 2})`}
+      >
+        {config.title}
+      </text>
+    </svg>
   );
 }
