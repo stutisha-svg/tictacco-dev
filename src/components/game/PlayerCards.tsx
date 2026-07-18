@@ -166,6 +166,8 @@ export function PlayerCards({
   progressOpp,
   leader,
   crownedWinner,
+  match,
+  matchTarget,
 }: PlayerCardsProps) {
   return (
     <div className="flex w-full items-start justify-between px-4 pt-6">
@@ -181,6 +183,8 @@ export function PlayerCards({
           progressYou={progressYou}
           progressOpp={progressOpp}
           leader={leader}
+          match={match}
+          matchTarget={matchTarget}
         />
         <div className="mt-1 text-body-sm" style={{ color: "var(--ink-soft)" }}>
           first one to X-O-X wins!
