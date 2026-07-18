@@ -23,9 +23,12 @@ interface BadgeConfig {
 
 const BADGE_CONFIG: Record<BadgeKind, BadgeConfig> = {
   win: { title: "YOU WIN!", subtitle: "epic sketch", fillVar: "var(--player-you)", tilt: -6 },
-  lose: { title: "RIVAL WINS", subtitle: "shake it off", fillVar: "var(--player-opp)", tilt: 5 },
-  tie: { title: "STALEMATE", subtitle: "scribble draw", fillVar: "var(--ink-soft)", tilt: -3 },
+  lose: { title: "YOU LOST", subtitle: "rival got it", fillVar: "var(--player-opp)", tilt: 5 },
+  tie: { title: "IT'S A TIE", subtitle: "scribble draw", fillVar: "var(--ink-soft)", tilt: -3 },
 };
+
+// Use the Caveat family for badges specifically (per design direction).
+const BADGE_FONT = "'Caveat', 'Patrick Hand', cursive";
 
 export function WinBadge({ kind }: WinBadgeProps) {
   const config = BADGE_CONFIG[kind];
