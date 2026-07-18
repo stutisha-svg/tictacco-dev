@@ -143,9 +143,9 @@ function Avatar({ name, glyph, owner, active, crowned }: AvatarProps) {
                 strokeWidth={3.5}
               />
               {glyph === "bug" ? (
-                <BugGlyph size={size} color="var(--ink)" />
+                <BugGlyph size={size} color={color} />
               ) : (
-                <RocketGlyph size={size} color="var(--ink)" />
+                <RocketGlyph size={size} color={color} />
               )}
             </g>
           </svg>
