@@ -1,158 +1,287 @@
-import { AnimatePresence, motion } from "motion/react";
+/**
+ * XoxIndicator — thermometer-style progress rig.
+ *
+ * A hand-drawn (slightly imperfect) rectangle acts as a horizontal
+ * "thermometer" that fills from BOTH sides simultaneously:
+ *   - left side fills with the player's colour proportional to progressYou/3
+ *   - right side fills with the rival's colour proportional to progressOpp/3
+ *
+ * Three XOX glyphs sit on top of the tube in light grey; whichever side is
+ * closer to X-O-X gets its own three glyphs highlighted as the fill rises
+ * past them. Physics uses a soft spring so the liquid feels weighty.
+ *
+ * A small "best of 3" tab sits above the tube showing the match tally.
+ */
+import { motion } from "motion/react";
 import { CrayonDefs } from "./CrayonDefs";
 import { Shape } from "./Shape";
 import type { Owner } from "@/game/rules";
+import type { MatchScore } from "@/game/useGameEngine";
 
 interface Props {
   progressYou: number; // 0..3
   progressOpp: number; // 0..3
   leader: Owner | null;
+  match: MatchScore;
+  matchTarget: number;
 }
 
 const SEQ = ["X", "O", "X"] as const;
 
-/** Tiny crayon burst that fires when a slot lights up. */
-function SlotBurst({ color, size }: { color: string; size: number }) {
-  const glyphs = ["x", "o", "~", "x", "o", "~"];
+const TUBE_W = 220;
+const TUBE_H = 56;
+
+/** Wobbly-quad path for the thermometer body — opposite long sides are NOT parallel. */
+const TUBE_PATH = (() => {
+  // corners: TL, TR, BR, BL slightly perturbed
+  const tl = [4, 6];
+  const tr = [TUBE_W - 5, 3];
+  const br = [TUBE_W - 3, TUBE_H - 5];
+  const bl = [6, TUBE_H - 3];
+  // control points for gentle wobble on each side
   return (
-    <>
-      {glyphs.map((g, i) => {
-        const angle = (i / glyphs.length) * Math.PI * 2;
-        const dist = size * 0.9;
-        const dx = Math.cos(angle) * dist;
-        const dy = Math.sin(angle) * dist;
-        return (
-          <motion.span
-            key={i}
-            className="pointer-events-none absolute left-1/2 top-1/2 select-none"
-            initial={{ x: 0, y: 0, opacity: 1, scale: 0.6, rotate: 0 }}
-            animate={{
-              x: dx,
-              y: dy,
-              opacity: [1, 1, 0],
-              scale: [0.6, 1.1, 0.9],
-              rotate: (i % 2 === 0 ? 1 : -1) * 180,
-            }}
-            transition={{ duration: 0.7, ease: "easeOut", delay: i * 0.02 }}
-            style={{
-              color,
-              fontFamily: "var(--font-display)",
-              fontStyle: "normal",
-              fontWeight: 700,
-              fontSize: size * 0.45,
-              lineHeight: 1,
-              transform: "translate(-50%, -50%)",
-            }}
-          >
-            {g}
-          </motion.span>
-        );
-      })}
-    </>
+    `M ${tl[0]} ${tl[1]} ` +
+    `Q ${TUBE_W / 2} ${tl[1] - 3} ${tr[0]} ${tr[1]} ` +
+    `Q ${tr[0] + 4} ${TUBE_H / 2} ${br[0]} ${br[1]} ` +
+    `Q ${TUBE_W / 2} ${TUBE_H - 2} ${bl[0]} ${bl[1]} ` +
+    `Q ${bl[0] - 5} ${TUBE_H / 2} ${tl[0]} ${tl[1]} Z`
+  );
+})();
+
+export function XoxIndicator({
+  progressYou,
+  progressOpp,
+  leader,
+  match,
+  matchTarget,
+}: Props) {
+  const youPct = Math.min(1, progressYou / 3);
+  const oppPct = Math.min(1, progressOpp / 3);
+  // Cap the two fills so they can't overlap in the middle visually.
+  const maxFillPct = 0.48;
+  const youFillW = TUBE_W * youPct * maxFillPct;
+  const oppFillW = TUBE_W * oppPct * maxFillPct;
+
+  return (
+    <div className="flex flex-col items-center">
+      <MatchTab match={match} target={matchTarget} />
+      <svg
+        width={TUBE_W}
+        height={TUBE_H}
+        viewBox={`0 0 ${TUBE_W} ${TUBE_H}`}
+        className="overflow-visible"
+        style={{ marginTop: 4 }}
+      >
+        <CrayonDefs />
+        <defs>
+          <clipPath id="tube-clip">
+            <path d={TUBE_PATH} />
+          </clipPath>
+          <filter id="tube-rough" x="-10%" y="-30%" width="120%" height="160%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="21" />
+            <feDisplacementMap in="SourceGraphic" scale="1.8" />
+          </filter>
+          <filter id="liquid-grain" x="-10%" y="-30%" width="120%" height="160%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="9" />
+            <feDisplacementMap in="SourceGraphic" scale="2.1" />
+          </filter>
+        </defs>
+
+        {/* wobbly outline */}
+        <g filter="url(#tube-rough)">
+          <path
+            d={TUBE_PATH}
+            fill="var(--paper)"
+            stroke="var(--ink)"
+            strokeWidth={2.8}
+            strokeLinejoin="round"
+          />
+        </g>
+
+        {/* left (you) fill */}
+        <g clipPath="url(#tube-clip)" filter="url(#liquid-grain)">
+          <motion.rect
+            x={0}
+            y={0}
+            height={TUBE_H}
+            initial={{ width: 0 }}
+            animate={{ width: youFillW }}
+            transition={{ type: "spring", stiffness: 90, damping: 16, mass: 1.1 }}
+            fill="var(--player-you)"
+            opacity={0.85}
+          />
+          {/* liquid meniscus wiggle */}
+          <motion.rect
+            x={0}
+            y={TUBE_H * 0.15}
+            height={TUBE_H * 0.7}
+            fill="var(--player-you)"
+            opacity={0.35}
+            initial={{ width: 0 }}
+            animate={{ width: youFillW + 4 }}
+            transition={{ type: "spring", stiffness: 70, damping: 14, mass: 1.4 }}
+          />
+        </g>
+
+        {/* right (opp) fill */}
+        <g clipPath="url(#tube-clip)" filter="url(#liquid-grain)">
+          <motion.rect
+            x={TUBE_W}
+            y={0}
+            height={TUBE_H}
+            initial={{ width: 0, x: TUBE_W }}
+            animate={{ width: oppFillW, x: TUBE_W - oppFillW }}
+            transition={{ type: "spring", stiffness: 90, damping: 16, mass: 1.1 }}
+            fill="var(--player-opp)"
+            opacity={0.85}
+          />
+          <motion.rect
+            y={TUBE_H * 0.15}
+            height={TUBE_H * 0.7}
+            fill="var(--player-opp)"
+            opacity={0.35}
+            initial={{ width: 0, x: TUBE_W }}
+            animate={{ width: oppFillW + 4, x: TUBE_W - oppFillW - 4 }}
+            transition={{ type: "spring", stiffness: 70, damping: 14, mass: 1.4 }}
+          />
+        </g>
+
+        {/* XOX glyphs stacked centrally on top of the tube */}
+        <g>
+          {SEQ.map((s, i) => {
+            const slotSize = 32;
+            const gap = 6;
+            const totalW = slotSize * 3 + gap * 2;
+            const startX = (TUBE_W - totalW) / 2;
+            const x = startX + i * (slotSize + gap);
+            const y = (TUBE_H - slotSize) / 2;
+
+            // Which side/owner is closer to this slot?
+            let owner: Owner | null = null;
+            let lit = false;
+            if (i === 0) {
+              owner = "you";
+              lit = progressYou >= 1;
+            } else if (i === 2) {
+              owner = "opp";
+              lit = progressOpp >= 1;
+            } else {
+              // middle slot: whichever leader has advanced through their two side slots
+              if (leader === "you" && progressYou >= 2) {
+                owner = "you";
+                lit = true;
+              } else if (leader === "opp" && progressOpp >= 2) {
+                owner = "opp";
+                lit = true;
+              }
+            }
+
+            const color =
+              owner === "you"
+                ? "var(--player-you)"
+                : owner === "opp"
+                  ? "var(--player-opp)"
+                  : "var(--ink-soft)";
+
+            return (
+              <g key={i} transform={`translate(${x}, ${y})`}>
+                <g style={{ opacity: lit ? 0 : 0.75 }}>
+                  <Shape shape={s} owner="you" size={slotSize} draw={false} seed={i + 33} tentative />
+                </g>
+                {lit && owner && (
+                  <Shape shape={s} owner={owner} size={slotSize} draw={true} seed={i + 33} />
+                )}
+                {/* tiny colored glow when this slot fills */}
+                {lit && (
+                  <motion.circle
+                    cx={slotSize / 2}
+                    cy={slotSize / 2}
+                    r={slotSize * 0.55}
+                    fill={color}
+                    initial={{ opacity: 0.6, scale: 0.5 }}
+                    animate={{ opacity: 0, scale: 1.4 }}
+                    transition={{ duration: 0.9 }}
+                    style={{ pointerEvents: "none" }}
+                  />
+                )}
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+    </div>
   );
 }
 
-export function XoxIndicator({ progressYou, progressOpp, leader }: Props) {
-  const size = 46;
+/** MatchTab — small hand-drawn tab showing match progress (best of N). */
+function MatchTab({ match, target }: { match: MatchScore; target: number }) {
+  const dots = target; // dots equal to games needed to win
   return (
-    <div className="flex items-center gap-2 px-2">
-      {SEQ.map((s, i) => {
-        const youLit = progressYou > i;
-        const oppLit = progressOpp > i;
-        const isMiddle = i === 1;
-        let owner: Owner | null = null;
-        let lit = false;
-        if (isMiddle) {
-          if (leader === "you" && progressYou >= 2) {
-            owner = "you";
-            lit = true;
-          } else if (leader === "opp" && progressOpp >= 2) {
-            owner = "opp";
-            lit = true;
-          }
-        } else if (i === 0) {
-          owner = "you";
-          lit = youLit;
-        } else {
-          owner = "opp";
-          lit = oppLit;
-        }
-        const color =
-          owner === "you"
-            ? "var(--player-you)"
-            : owner === "opp"
-              ? "var(--player-opp)"
-              : "var(--ink-soft)";
-        // subtle "breathing" on the next-to-fill leader slot to draw the eye
-        const isNextForLeader =
-          !lit &&
-          ((leader === "you" && i === 0 && progressYou === 0) ||
-            (leader === "you" && isMiddle && progressYou === 2) ||
-            (leader === "opp" && i === 2 && progressOpp === 0) ||
-            (leader === "opp" && isMiddle && progressOpp === 2));
-
-        return (
-          <motion.div
-            key={i}
-            className="relative"
-            style={{ width: size, height: size }}
-            animate={
-              lit
-                ? { scale: [1, 1.28, 1] }
-                : isNextForLeader
-                  ? { scale: [1, 1.06, 1] }
-                  : { scale: 1 }
-            }
-            transition={
-              lit
-                ? { duration: 0.55, ease: "easeOut" }
-                : { duration: 1.6, repeat: isNextForLeader ? Infinity : 0 }
-            }
-          >
-            {/* radial flash halo behind the shape when it just lit up */}
-            <AnimatePresence>
-              {lit && (
-                <motion.span
-                  key={`halo-${i}-${owner}`}
-                  className="pointer-events-none absolute inset-0 rounded-full"
-                  style={{
-                    background: `radial-gradient(circle, ${color} 0%, transparent 65%)`,
-                  }}
-                  initial={{ opacity: 0.9, scale: 0.4 }}
-                  animate={{ opacity: 0, scale: 1.8 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.7, ease: "easeOut" }}
-                />
-              )}
-            </AnimatePresence>
-
-            <svg
-              width={size}
-              height={size}
-              viewBox={`0 0 ${size} ${size}`}
-              style={{ overflow: "visible", position: "relative" }}
-            >
-              <CrayonDefs />
-              {/* base grey shape (dimmed when lit) */}
-              <g style={{ opacity: lit ? 0 : 0.85 }}>
-                <Shape shape={s} owner="you" size={size} draw={false} seed={i + 33} tentative />
-              </g>
-              {lit && owner && (
-                <Shape shape={s} owner={owner} size={size} draw={true} seed={i + 33} />
-              )}
-            </svg>
-
-            {/* Mini confetti burst emitted with the light-up */}
-            <AnimatePresence>
-              {lit && (
-                <div key={`burst-${i}-${owner}`} className="absolute inset-0">
-                  <SlotBurst color={color} size={size} />
-                </div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        );
-      })}
+    <div
+      className="relative"
+      style={{
+        fontFamily: "var(--font-display)",
+      }}
+    >
+      <svg width={168} height={30} viewBox="0 0 168 30" className="overflow-visible">
+        <defs>
+          <filter id="tab-rough" x="-5%" y="-20%" width="110%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="2" seed="3" />
+            <feDisplacementMap in="SourceGraphic" scale="1.4" />
+          </filter>
+        </defs>
+        <g filter="url(#tab-rough)">
+          <path
+            d="M 6 22 Q 4 6 20 5 L 148 3 Q 164 4 162 22 Z"
+            fill="var(--paper)"
+            stroke="var(--ink)"
+            strokeWidth={2}
+            strokeLinejoin="round"
+          />
+        </g>
+        <text
+          x={44}
+          y={19}
+          fontFamily="var(--font-display)"
+          fontSize={14}
+          fill="var(--ink)"
+          fontWeight={600}
+        >
+          best of {target * 2 - 1}
+        </text>
+      </svg>
+      {/* score dots overlaid inside the tab, right side */}
+      <div className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-2">
+        <div className="flex items-center gap-0.5">
+          {Array.from({ length: dots }).map((_, i) => (
+            <span
+              key={`y-${i}`}
+              className="h-2 w-2 rounded-full"
+              style={{
+                background:
+                  i < match.you ? "var(--player-you)" : "transparent",
+                border: "1.5px solid var(--player-you)",
+              }}
+            />
+          ))}
+        </div>
+        <span className="text-[11px]" style={{ color: "var(--ink-soft)" }}>
+          vs
+        </span>
+        <div className="flex items-center gap-0.5">
+          {Array.from({ length: dots }).map((_, i) => (
+            <span
+              key={`o-${i}`}
+              className="h-2 w-2 rounded-full"
+              style={{
+                background:
+                  i < match.opp ? "var(--player-opp)" : "transparent",
+                border: "1.5px solid var(--player-opp)",
+              }}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
