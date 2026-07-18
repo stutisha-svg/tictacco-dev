@@ -79,8 +79,8 @@ export function Board({ state, onTap, boardPx }: Props) {
         ))}
       </g>
 
-      {/* Focused reveal spotlight — only around the opponent's tile so the
-          rest of the board stays readable and not visually distracting. */}
+      {/* Focused reveal spotlight — soft radial darkening around the
+          opponent's tile only. No ring drawn on the tile itself. */}
       <AnimatePresence>
         {revealing && state.oppMove && (() => {
           const oi = state.oppMove.tile;
@@ -88,8 +88,8 @@ export function Board({ state, onTap, boardPx }: Props) {
           const oc = oi % SIZE;
           const cx = oc * cell + cell / 2;
           const cy = or * cell + cell / 2;
-          const rInner = cell * 0.7;
-          const rOuter = cell * 1.4;
+          const rInner = cell * 0.75;
+          const rOuter = cell * 1.6;
           return (
             <motion.g
               key="opp-spot"
@@ -107,23 +107,12 @@ export function Board({ state, onTap, boardPx }: Props) {
                 </radialGradient>
               </defs>
               <rect x={0} y={0} width={boardPx} height={boardPx} fill="url(#opp-spot-grad)" />
-              {/* subtle warm ring around the target tile */}
-              <motion.circle
-                cx={cx}
-                cy={cy}
-                r={rInner}
-                fill="none"
-                stroke="rgba(255,220,150,0.7)"
-                strokeWidth={2}
-                initial={{ scale: 1.3, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.4 }}
-                style={{ transformOrigin: `${cx}px ${cy}px` }}
-              />
             </motion.g>
           );
         })()}
       </AnimatePresence>
+
+
 
 
       {/* tiles content */}
