@@ -25,6 +25,8 @@ export interface TieRound {
 export interface MatchScore {
   you: number;
   opp: number;
+  /** Ordered per-game winners so the tally can render each slot. */
+  history: Owner[];
 }
 
 export interface GameState {
