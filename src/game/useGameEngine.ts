@@ -81,7 +81,7 @@ const initial = (): GameState => ({
   progressYou: 0,
   progressOpp: 0,
   match: { you: 0, opp: 0 },
-  matchTarget: MATCH_TARGET,
+  matchTarget: MATCH_TOTAL,
   matchOver: false,
 });
 
