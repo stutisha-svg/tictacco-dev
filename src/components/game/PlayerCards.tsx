@@ -20,6 +20,9 @@ interface PlayerCardsProps {
   crownedWinner?: Owner | null;
   match: MatchScore;
   matchTarget: number;
+  /** Optional reaction bubble rendered as a thought cloud over the avatar. */
+  youReaction?: string | null;
+  oppReaction?: string | null;
 }
 
 interface AvatarProps {
@@ -28,6 +31,8 @@ interface AvatarProps {
   owner: Owner;
   active: boolean;
   crowned: boolean;
+  score: number;
+  reaction?: string | null;
 }
 
 function BugGlyph({ size, color }: { size: number; color: string }) {
