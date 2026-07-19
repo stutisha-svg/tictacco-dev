@@ -63,7 +63,7 @@ const ROUND_MS = 5000;
 const REVEAL_MS = 1800;
 const TIE_HOLD_MS = 2200;
 const IDLE_WARN_MS = 8000;
-const MATCH_TARGET = 2; // best of 3
+const MATCH_TOTAL = 3; // play all 3 games; most wins takes it
 
 const initial = (): GameState => ({
   board: emptyBoard(),
