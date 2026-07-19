@@ -25,6 +25,9 @@
   --color-player-you: var(--player-you);
   --color-player-opp: var(--player-opp);
   --color-dead: var(--dead);
+  --color-accent-purple: var(--accent-purple);
+  --color-accent-purple-soft: var(--accent-purple-soft);
+  --color-ink-brown: var(--ink-brown);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-muted: var(--muted);
