@@ -87,12 +87,12 @@ export function XoxIndicator({
           </filter>
         </defs>
 
-        {/* wobbly outline */}
+        {/* wobbly outline — darker beige/brown */}
         <g filter="url(#tube-rough)">
           <path
             d={TUBE_PATH}
             fill="var(--paper)"
-            stroke="var(--ink)"
+            stroke="var(--ink-brown)"
             strokeWidth={2.8}
             strokeLinejoin="round"
           />
