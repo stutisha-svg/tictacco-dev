@@ -214,7 +214,7 @@ function reducer(state: GameState, action: Action): GameState {
       const keepMatch = !state.matchOver;
       return {
         ...initial(),
-        match: keepMatch ? state.match : { you: 0, opp: 0 },
+        match: keepMatch ? state.match : { you: 0, opp: 0, history: [] },
         matchTarget: state.matchTarget,
       };
     }
