@@ -165,7 +165,7 @@ function reducer(state: GameState, action: Action): GameState {
           opp: state.match.opp + (winner.owner === "opp" ? 1 : 0),
         };
         matchOver =
-          match.you >= state.matchTarget || match.opp >= state.matchTarget;
+          match.you + match.opp >= state.matchTarget;
       }
 
       return {
