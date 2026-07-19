@@ -126,6 +126,30 @@ export function RoundTimer({
           />
         </g>
 
+        {/* skeleton shimmer sweep — only when the player hasn't moved yet */}
+        {idleWarning && (
+          <g>
+            <defs>
+              <linearGradient id="shimmer-grad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="var(--ink)" stopOpacity="0" />
+                <stop offset="50%" stopColor="var(--ink)" stopOpacity="0.28" />
+                <stop offset="100%" stopColor="var(--ink)" stopOpacity="0" />
+              </linearGradient>
+              <clipPath id="shimmer-clip">
+                <rect x={2} y={2} width={BAR_WIDTH - 4} height={BAR_HEIGHT - 4} rx={RADIUS} ry={RADIUS} />
+              </clipPath>
+            </defs>
+            <g clipPath="url(#shimmer-clip)">
+              <rect y={0} width={80} height={BAR_HEIGHT}>
+                <animate attributeName="x" from={-80} to={BAR_WIDTH} dur="1.4s" repeatCount="indefinite" />
+              </rect>
+              <rect y={0} width={80} height={BAR_HEIGHT} fill="url(#shimmer-grad)">
+                <animate attributeName="x" from={-80} to={BAR_WIDTH} dur="1.4s" repeatCount="indefinite" />
+              </rect>
+            </g>
+          </g>
+        )}
+
         {/* Chunky ink squiggle — grows left→right, no pre-existing ghost */}
         <g clipPath="url(#timer-fill-clip)" filter="url(#timer-scribble)">
           {/* double-stroke for extra crayon weight */}

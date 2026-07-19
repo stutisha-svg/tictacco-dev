@@ -25,6 +25,8 @@ export interface TieRound {
 export interface MatchScore {
   you: number;
   opp: number;
+  /** Ordered per-game winners so the tally can render each slot. */
+  history: Owner[];
 }
 
 export interface GameState {
@@ -63,7 +65,7 @@ const ROUND_MS = 5000;
 const REVEAL_MS = 1800;
 const TIE_HOLD_MS = 2200;
 const IDLE_WARN_MS = 8000;
-const MATCH_TARGET = 2; // best of 3
+const MATCH_TOTAL = 3; // play all 3 games; most wins takes it
 
 const initial = (): GameState => ({
   board: emptyBoard(),
@@ -80,8 +82,8 @@ const initial = (): GameState => ({
   tieRound: null,
   progressYou: 0,
   progressOpp: 0,
-  match: { you: 0, opp: 0 },
-  matchTarget: MATCH_TARGET,
+  match: { you: 0, opp: 0, history: [] },
+  matchTarget: MATCH_TOTAL,
   matchOver: false,
 });
 
@@ -163,9 +165,10 @@ function reducer(state: GameState, action: Action): GameState {
         match = {
           you: state.match.you + (winner.owner === "you" ? 1 : 0),
           opp: state.match.opp + (winner.owner === "opp" ? 1 : 0),
+          history: [...state.match.history, winner.owner],
         };
         matchOver =
-          match.you >= state.matchTarget || match.opp >= state.matchTarget;
+          match.you + match.opp >= state.matchTarget;
       }
 
       return {
@@ -211,7 +214,7 @@ function reducer(state: GameState, action: Action): GameState {
       const keepMatch = !state.matchOver;
       return {
         ...initial(),
-        match: keepMatch ? state.match : { you: 0, opp: 0 },
+        match: keepMatch ? state.match : { you: 0, opp: 0, history: [] },
         matchTarget: state.matchTarget,
       };
     }

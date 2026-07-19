@@ -20,6 +20,9 @@ interface PlayerCardsProps {
   crownedWinner?: Owner | null;
   match: MatchScore;
   matchTarget: number;
+  /** Optional reaction bubble rendered as a thought cloud over the avatar. */
+  youReaction?: string | null;
+  oppReaction?: string | null;
 }
 
 interface AvatarProps {
@@ -28,6 +31,8 @@ interface AvatarProps {
   owner: Owner;
   active: boolean;
   crowned: boolean;
+  score: number;
+  reaction?: string | null;
 }
 
 function BugGlyph({ size, color }: { size: number; color: string }) {
@@ -83,36 +88,106 @@ function RocketGlyph({ size, color }: { size: number; color: string }) {
   );
 }
 
-function Avatar({ name, glyph, owner, active, crowned }: AvatarProps) {
+function ThoughtCloud({ text, color }: { text: string; color: string }) {
+  return (
+    <div
+      className="pointer-events-none absolute -top-3 left-1/2 z-30"
+      style={{ transform: "translate(-50%, -100%)" }}
+    >
+      <div
+        className="relative flex items-center justify-center rounded-2xl border-2 bg-white px-3 py-1"
+        style={{
+          borderColor: "var(--ink-brown)",
+          minWidth: 44,
+          boxShadow: "0 3px 8px rgba(0,0,0,0.12)",
+        }}
+      >
+        <span style={{ fontSize: 22, lineHeight: 1, color }}>{text}</span>
+        {/* tail bubbles */}
+        <span
+          className="absolute h-2 w-2 rounded-full bg-white"
+          style={{
+            left: "50%",
+            bottom: -6,
+            transform: "translateX(-50%)",
+            border: "2px solid var(--ink-brown)",
+          }}
+        />
+        <span
+          className="absolute h-1.5 w-1.5 rounded-full bg-white"
+          style={{
+            left: "50%",
+            bottom: -12,
+            transform: "translate(-140%, 0)",
+            border: "1.5px solid var(--ink-brown)",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function Avatar({ name, glyph, owner, active, crowned, score, reaction }: AvatarProps) {
   const color = owner === "you" ? "var(--player-you)" : "var(--player-opp)";
   const size = 64;
+  const purpleBg =
+    owner === "you" ? "var(--accent-purple)" : "color-mix(in oklab, var(--accent-purple) 55%, transparent)";
   return (
     <div className="flex flex-col items-center gap-1">
       <div
         className="relative"
         style={{ width: size, height: size, overflow: "visible" }}
+        data-colored-island="true"
       >
         <AnimatePresence>
-          {crowned && (
+          {reaction && (
             <motion.div
-              key="crown"
-              className="pointer-events-none absolute left-1/2"
-              style={{
-                top: -size * 0.42,
-                transform: "translateX(-50%)",
-                width: size * 0.9,
-                display: "flex",
-                justifyContent: "center",
-              }}
-              initial={{ y: 4, opacity: 0, scale: 0.9 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              key={reaction}
+              initial={{ opacity: 0, y: 6, scale: 0.85 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              transition={{ type: "spring", stiffness: 260, damping: 18 }}
             >
-              <Crown color={color} size={size * 0.75} />
+              <ThoughtCloud text={reaction} color={color} />
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Crown — plain div wrapper handles translateX so motion's animated
+            transform on the inner element can't clobber it. */}
+        <AnimatePresence>
+          {crowned && (
+            <div
+              key="crown-wrap"
+              className="pointer-events-none absolute"
+              style={{
+                top: -size * 0.55,
+                left: "50%",
+                width: 0,
+                height: 0,
+              }}
+            >
+              <motion.div
+                key="crown"
+                style={{
+                  width: size * 0.85,
+                  height: size * 0.65,
+                  marginLeft: -(size * 0.85) / 2,
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "flex-end",
+                }}
+                initial={{ y: 4, opacity: 0, scale: 0.9 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Crown color={color} size={size * 0.75} />
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
         <motion.div
           animate={{ scale: active ? [1, 1.06, 1] : 1 }}
           transition={{ duration: 1.2, repeat: active ? Infinity : 0 }}
@@ -157,6 +232,20 @@ function Avatar({ name, glyph, owner, active, crowned }: AvatarProps) {
       <div className="text-body-sm" style={{ color: "var(--ink)" }}>
         {name}
       </div>
+      {/* small purple score tab */}
+      <div
+        className="flex items-center gap-1 rounded-full px-2 py-0.5"
+        style={{
+          background: purpleBg,
+          color: "var(--paper)",
+          fontFamily: "var(--font-display)",
+          fontSize: 12,
+          lineHeight: 1,
+        }}
+      >
+        <span style={{ fontWeight: 700 }}>{score}</span>
+        <span style={{ opacity: 0.8, fontSize: 10 }}>wins</span>
+      </div>
     </div>
   );
 }
@@ -168,6 +257,8 @@ export function PlayerCards({
   crownedWinner,
   match,
   matchTarget,
+  youReaction,
+  oppReaction,
 }: PlayerCardsProps) {
   return (
     <div className="flex w-full items-start justify-between px-4 pt-6">
@@ -177,6 +268,8 @@ export function PlayerCards({
         owner="you"
         active={leader === "you"}
         crowned={crownedWinner === "you"}
+        score={match.you}
+        reaction={youReaction}
       />
       <div className="flex flex-col items-center pt-2">
         <XoxIndicator
@@ -196,6 +289,8 @@ export function PlayerCards({
         owner="opp"
         active={leader === "opp"}
         crowned={crownedWinner === "opp"}
+        score={match.opp}
+        reaction={oppReaction}
       />
     </div>
   );

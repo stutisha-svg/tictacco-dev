@@ -25,6 +25,9 @@
   --color-player-you: var(--player-you);
   --color-player-opp: var(--player-opp);
   --color-dead: var(--dead);
+  --color-accent-purple: var(--accent-purple);
+  --color-accent-purple-soft: var(--accent-purple-soft);
+  --color-ink-brown: var(--ink-brown);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-muted: var(--muted);
@@ -41,6 +44,9 @@
   --ink-soft: oklch(0.55 0.02 60);
   --player-you: oklch(0.72 0.18 45);   /* orange */
   --player-opp: oklch(0.75 0.13 210);  /* cyan */
+  --accent-purple: oklch(0.62 0.19 305);
+  --accent-purple-soft: oklch(0.78 0.12 305);
+  --ink-brown: oklch(0.42 0.06 65);   /* darker beige/brown outline */
   --dead: oklch(0.18 0.02 60);
   --background: var(--paper);
   --foreground: var(--ink);
