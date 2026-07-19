@@ -82,7 +82,7 @@ const initial = (): GameState => ({
   tieRound: null,
   progressYou: 0,
   progressOpp: 0,
-  match: { you: 0, opp: 0 },
+  match: { you: 0, opp: 0, history: [] },
   matchTarget: MATCH_TOTAL,
   matchOver: false,
 });
