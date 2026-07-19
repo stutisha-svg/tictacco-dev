@@ -213,17 +213,17 @@ export function XoxIndicator({
   );
 }
 
-/** MatchTab — small hand-drawn tab showing match progress (best of N). */
+/** MatchTab — purple pill showing "best of 3" plus 3 tally slots for game winners. */
 function MatchTab({ match, target }: { match: MatchScore; target: number }) {
-  const dots = target; // dots equal to games needed to win
+  const slots: (Owner | null)[] = Array.from({ length: target }).map(
+    (_, i) => match.history[i] ?? null,
+  );
   return (
     <div
       className="relative"
-      style={{
-        fontFamily: "var(--font-display)",
-      }}
+      style={{ fontFamily: "var(--font-display)" }}
     >
-      <svg width={168} height={30} viewBox="0 0 168 30" className="overflow-visible">
+      <svg width={196} height={30} viewBox="0 0 196 30" className="overflow-visible">
         <defs>
           <filter id="tab-rough" x="-5%" y="-20%" width="110%" height="140%">
             <feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="2" seed="3" />
@@ -231,57 +231,47 @@ function MatchTab({ match, target }: { match: MatchScore; target: number }) {
           </filter>
         </defs>
         <g filter="url(#tab-rough)">
+          {/* purple filled tab, no outline stroke */}
           <path
-            d="M 6 22 Q 4 6 20 5 L 148 3 Q 164 4 162 22 Z"
-            fill="var(--paper)"
-            stroke="var(--ink)"
-            strokeWidth={2}
-            strokeLinejoin="round"
+            d="M 6 24 Q 4 5 20 4 L 176 3 Q 192 4 190 24 Z"
+            fill="var(--accent-purple)"
+            fillOpacity={0.9}
           />
         </g>
         <text
-          x={44}
-          y={19}
+          x={16}
+          y={20}
           fontFamily="var(--font-display)"
           fontSize={14}
-          fill="var(--ink)"
-          fontWeight={600}
+          fill="var(--paper)"
+          fontWeight={700}
         >
-          best of {target * 2 - 1}
+          best of {target}
         </text>
       </svg>
-      {/* score dots overlaid inside the tab, right side */}
-      <div className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-2">
-        <div className="flex items-center gap-0.5">
-          {Array.from({ length: dots }).map((_, i) => (
+      {/* tally slots on the right — one per game */}
+      <div className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
+        {slots.map((winner, i) => {
+          const bg =
+            winner === "you"
+              ? "var(--player-you)"
+              : winner === "opp"
+                ? "var(--player-opp)"
+                : "transparent";
+          return (
             <span
-              key={`y-${i}`}
-              className="h-2 w-2 rounded-full"
+              key={i}
+              className="flex h-4 w-4 items-center justify-center rounded-full"
               style={{
-                background:
-                  i < match.you ? "var(--player-you)" : "transparent",
-                border: "1.5px solid var(--player-you)",
+                background: bg,
+                border: "1.5px solid var(--paper)",
+                boxShadow: winner ? "0 1px 2px rgba(0,0,0,0.15)" : "none",
               }}
             />
-          ))}
-        </div>
-        <span className="text-[11px]" style={{ color: "var(--ink-soft)" }}>
-          vs
-        </span>
-        <div className="flex items-center gap-0.5">
-          {Array.from({ length: dots }).map((_, i) => (
-            <span
-              key={`o-${i}`}
-              className="h-2 w-2 rounded-full"
-              style={{
-                background:
-                  i < match.opp ? "var(--player-opp)" : "transparent",
-                border: "1.5px solid var(--player-opp)",
-              }}
-            />
-          ))}
-        </div>
+          );
+        })}
       </div>
     </div>
   );
 }
+
