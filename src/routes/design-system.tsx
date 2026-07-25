@@ -17,11 +17,11 @@ import { CrayonDefs } from "@/components/game/CrayonDefs";
 export const Route = createFileRoute("/design-system")({
   head: () => ({
     meta: [
-      { title: "Design Tokens Guide — XOX" },
+      { title: "Design Tokens Guide — tic tac co" },
       {
         name: "description",
         content:
-          "Design system reference: crayon color tokens, typography scale, button states, and animated interactive demos for the XOX game.",
+          "Design system reference: crayon color tokens, typography scale, button states, and animated interactive demos for tic tac co.",
       },
     ],
   }),
@@ -176,7 +176,7 @@ function DesignSystemPage() {
           Design Tokens Guide
         </h1>
         <p className="text-body-md" style={{ color: "var(--ink-soft)" }}>
-          Every surface, glyph, and micro-interaction in XOX should feel
+          Every surface, glyph, and micro-interaction in tic tac co should feel
           hand-drawn. Use this page as the single source of truth.
         </p>
       </header>

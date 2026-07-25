@@ -1,0 +1,37 @@
+---
+description: Layout rules for tic tac co — centered column, wheel 75% of grid
+globs: src/components/game/**
+alwaysApply: true
+---
+
+# Game chrome layout (tic tac co)
+
+## Centered column (do not break this)
+
+- Profiles, grid, and controls are a **single centered column** (`mx-auto`, `max-w-[460px]`, `items-center`).
+- **Never** set column width to `100vw − peek` or otherwise resize/off-center the stack for the wheel.
+- Board size from `boardSizeForViewport` only — wheel must not feed back into board size.
+
+## Reaction wheel
+
+- Diameter = **75% of grid height** (`WHEEL_GRID_FRAC = 0.75`). **Do not** shrink this to ~55% — that looked tiny. Only change if the user explicitly asks.
+- Visible peek = **~20–25%** of circle width (`WHEEL_VISIBLE_FRAC ≈ 0.22`). Do not raise toward 40–50%.
+- Use the **full ideal peek** from that fraction — do **not** clamp the peek down to a tiny gap (that makes the wheel look microscopic).
+- Dock with `position: fixed; right: 0` (viewport). No extra right margin.
+- Drag + inertia; tap to react. No “drag” labels, no star, no Unicode emoji.
+
+## Forbidden
+
+- `playW = viewport − peek` (recenters/resizes the whole UI)
+- Shrinking diameter to ~55% “to be safe”
+- Clamping peek to near-zero based on board gap
+- Moving rewards above the grid
+- Cells below 44px for side chrome
+
+## Rewards
+
+- Left of the grid, absolute (`right: 100%`). Shrink/wrap text if needed.
+
+## Win / lose
+
+- Confetti mounts once for the whole result; minimizing the badge must not remount it.

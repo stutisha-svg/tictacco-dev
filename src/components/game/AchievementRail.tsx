@@ -1,12 +1,6 @@
 /**
- * AchievementBadge — floats in from the left when the player is close to a
- * milestone (e.g. one shape away from XOX). Docks to a small left rail on
- * the board's edge. Each badge fills up as ink is poured in — the SVG mask
- * clips a rising fill layer inside the medallion shape.
- *
- * Visual language is more vector/illustration-forward than the crayon
- * badges (thin outline, filled illustration) so it reads as a distinct
- * "achievements" surface.
+ * AchievementRail — compact badges stacked on the LEFT of the grid.
+ * Sized to fit the left gutter; labels wrap instead of overflowing.
  */
 import { motion, AnimatePresence } from "motion/react";
 
@@ -22,18 +16,32 @@ interface Props {
   achievements: Achievement[];
 }
 
-const SIZE = 56;
+/** Narrow column so it fits beside the board without growing the page. */
+export const ACHIEVEMENT_COL_W = 52;
+const SIZE = 32;
 
 function Glyph({ kind }: { kind: Achievement["glyph"] }) {
   const s = SIZE;
   const color = "var(--accent-purple)";
-  const stroke = { stroke: color, strokeWidth: 2, fill: "none", strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  const stroke = {
+    stroke: color,
+    strokeWidth: 1.6,
+    fill: "none",
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
   if (kind === "trophy") {
     return (
       <g {...stroke}>
-        <path d={`M ${s * 0.32} ${s * 0.28} L ${s * 0.68} ${s * 0.28} L ${s * 0.62} ${s * 0.56} L ${s * 0.38} ${s * 0.56} Z`} />
-        <path d={`M ${s * 0.32} ${s * 0.32} L ${s * 0.22} ${s * 0.36} L ${s * 0.24} ${s * 0.46} L ${s * 0.34} ${s * 0.48}`} />
-        <path d={`M ${s * 0.68} ${s * 0.32} L ${s * 0.78} ${s * 0.36} L ${s * 0.76} ${s * 0.46} L ${s * 0.66} ${s * 0.48}`} />
+        <path
+          d={`M ${s * 0.32} ${s * 0.28} L ${s * 0.68} ${s * 0.28} L ${s * 0.62} ${s * 0.56} L ${s * 0.38} ${s * 0.56} Z`}
+        />
+        <path
+          d={`M ${s * 0.32} ${s * 0.32} L ${s * 0.22} ${s * 0.36} L ${s * 0.24} ${s * 0.46} L ${s * 0.34} ${s * 0.48}`}
+        />
+        <path
+          d={`M ${s * 0.68} ${s * 0.32} L ${s * 0.78} ${s * 0.36} L ${s * 0.76} ${s * 0.46} L ${s * 0.66} ${s * 0.48}`}
+        />
         <path d={`M ${s * 0.5} ${s * 0.56} L ${s * 0.5} ${s * 0.68}`} />
         <path d={`M ${s * 0.36} ${s * 0.74} L ${s * 0.64} ${s * 0.74}`} />
       </g>
@@ -42,7 +50,9 @@ function Glyph({ kind }: { kind: Achievement["glyph"] }) {
   if (kind === "spark") {
     return (
       <g {...stroke}>
-        <path d={`M ${s * 0.5} ${s * 0.22} L ${s * 0.56} ${s * 0.44} L ${s * 0.78} ${s * 0.5} L ${s * 0.56} ${s * 0.56} L ${s * 0.5} ${s * 0.78} L ${s * 0.44} ${s * 0.56} L ${s * 0.22} ${s * 0.5} L ${s * 0.44} ${s * 0.44} Z`} />
+        <path
+          d={`M ${s * 0.5} ${s * 0.22} L ${s * 0.56} ${s * 0.44} L ${s * 0.78} ${s * 0.5} L ${s * 0.56} ${s * 0.56} L ${s * 0.5} ${s * 0.78} L ${s * 0.44} ${s * 0.56} L ${s * 0.22} ${s * 0.5} L ${s * 0.44} ${s * 0.44} Z`}
+        />
       </g>
     );
   }
@@ -57,7 +67,11 @@ function Glyph({ kind }: { kind: Achievement["glyph"] }) {
 
 export function AchievementRail({ achievements }: Props) {
   return (
-    <div className="pointer-events-none absolute left-1 top-24 z-30 flex flex-col gap-2">
+    <div
+      className="pointer-events-none flex flex-col items-center gap-1.5"
+      style={{ width: ACHIEVEMENT_COL_W }}
+      aria-label="achievements"
+    >
       <AnimatePresence>
         {achievements.map((a) => {
           const fillH = SIZE * a.progress;
@@ -65,66 +79,56 @@ export function AchievementRail({ achievements }: Props) {
           return (
             <motion.div
               key={a.id}
-              className="pointer-events-auto relative"
-              style={{ width: SIZE + 6 }}
-              initial={{ x: -80, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -80, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 240, damping: 22 }}
+              className="pointer-events-auto relative flex w-full flex-col items-center"
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ type: "spring", stiffness: 260, damping: 24 }}
             >
               <svg
-                width={SIZE + 6}
-                height={SIZE + 6}
-                viewBox={`0 0 ${SIZE + 6} ${SIZE + 6}`}
+                width={SIZE + 4}
+                height={SIZE + 4}
+                viewBox={`0 0 ${SIZE + 4} ${SIZE + 4}`}
                 className="overflow-visible"
+                aria-hidden
               >
                 <defs>
                   <clipPath id={clipId}>
-                    <circle cx={SIZE / 2 + 3} cy={SIZE / 2 + 3} r={SIZE / 2} />
+                    <circle cx={SIZE / 2 + 2} cy={SIZE / 2 + 2} r={SIZE / 2} />
                   </clipPath>
                 </defs>
-                {/* backing */}
                 <circle
-                  cx={SIZE / 2 + 3}
-                  cy={SIZE / 2 + 3}
+                  cx={SIZE / 2 + 2}
+                  cy={SIZE / 2 + 2}
                   r={SIZE / 2}
                   fill="white"
                   stroke="var(--accent-purple)"
-                  strokeWidth={2.2}
+                  strokeWidth={1.8}
                 />
-                {/* Ink pour fill rising from the bottom, clipped to circle */}
                 <g clipPath={`url(#${clipId})`}>
                   <motion.rect
                     x={0}
-                    width={SIZE + 6}
-                    initial={{ y: SIZE + 6, height: 0 }}
-                    animate={{ y: SIZE + 6 - fillH, height: fillH }}
+                    width={SIZE + 4}
+                    initial={{ y: SIZE + 4, height: 0 }}
+                    animate={{ y: SIZE + 4 - fillH, height: fillH }}
                     transition={{ type: "spring", stiffness: 60, damping: 14, mass: 1.4 }}
                     fill="var(--accent-purple-soft)"
                     opacity={0.55}
                   />
-                  {/* wobbly meniscus */}
-                  <motion.path
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: fillH > 4 ? 1 : 0 }}
-                    d={`M 0 ${SIZE + 6 - fillH} Q ${(SIZE + 6) / 4} ${SIZE + 4 - fillH} ${(SIZE + 6) / 2} ${SIZE + 6 - fillH} T ${SIZE + 6} ${SIZE + 6 - fillH}`}
-                    stroke="var(--accent-purple)"
-                    strokeWidth={1.5}
-                    fill="none"
-                  />
                 </g>
-                {/* Glyph on top */}
-                <Glyph kind={a.glyph} />
+                <g transform="translate(2, 2)">
+                  <Glyph kind={a.glyph} />
+                </g>
               </svg>
-              {/* micro label */}
               <div
-                className="mt-0.5 rounded-md bg-white/90 px-1 text-center"
+                className="mt-0.5 w-full text-center text-[11px] font-semibold leading-tight"
                 style={{
                   fontFamily: "var(--font-display)",
-                  fontSize: 10,
                   color: "var(--accent-purple)",
-                  border: "1px solid var(--accent-purple)",
-                  lineHeight: 1.1,
+                  whiteSpace: "normal",
+                  overflowWrap: "anywhere",
+                  wordBreak: "break-word",
+                  maxWidth: ACHIEVEMENT_COL_W,
                 }}
               >
                 {a.title}

@@ -59,8 +59,9 @@ function buildPieces(count: number, kind: ConfettiKind): Piece[] {
 }
 
 /** Small hand-drawn "dead" face (X eyes, flat mouth). */
-function DeadFace({ size, color }: { size: number; color: string }) {
+function DeadFace({ size, color, id }: { size: number; color: string; id: number }) {
   const s = size;
+  const filterId = `face-rough-${id}`;
   return (
     <svg
       width={s}
@@ -69,7 +70,7 @@ function DeadFace({ size, color }: { size: number; color: string }) {
       style={{ overflow: "visible", display: "block" }}
     >
       <defs>
-        <filter id="face-rough" x="-10%" y="-10%" width="120%" height="120%">
+        <filter id={filterId} x="-10%" y="-10%" width="120%" height="120%">
           <feTurbulence type="fractalNoise" baseFrequency="1.0" numOctaves="2" seed="5" />
           <feDisplacementMap in="SourceGraphic" scale="1.2" />
         </filter>
@@ -79,7 +80,7 @@ function DeadFace({ size, color }: { size: number; color: string }) {
         strokeWidth={Math.max(1.4, s * 0.06)}
         strokeLinecap="round"
         fill="none"
-        filter="url(#face-rough)"
+        filter={`url(#${filterId})`}
       >
         <circle cx={s / 2} cy={s / 2} r={s * 0.4} />
         {/* X eyes */}
@@ -123,12 +124,12 @@ export function Confetti({ count = 42, kind = "win" }: ConfettiProps) {
             duration: piece.duration,
             delay: piece.delay,
             ease: "easeIn",
-            repeat: kind === "lose" ? Infinity : 0,
-            repeatDelay: kind === "lose" ? 0.4 : 0,
+            repeat: Infinity,
+            repeatDelay: 0.4,
           }}
         >
           {piece.glyph === "face" ? (
-            <DeadFace size={piece.size} color={piece.hue} />
+            <DeadFace id={piece.id} size={piece.size} color={piece.hue} />
           ) : (
             piece.glyph
           )}

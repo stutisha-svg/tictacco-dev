@@ -81,7 +81,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
       },
-      { title: "XOX — a crayon duel" },
+      { title: "tic tac co" },
       {
         name: "description",
         content:
@@ -89,7 +89,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         property: "og:title",
-        content: "XOX — a crayon duel",
+        content: "tic tac co",
       },
       {
         property: "og:description",

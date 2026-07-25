@@ -9,6 +9,8 @@
 import { AnimatePresence, motion } from "motion/react";
 import { XoxIndicator } from "./XoxIndicator";
 import { Crown } from "./Crown";
+import { ReactionSticker } from "./ReactionSticker";
+import type { Reaction } from "./reactions";
 import type { Owner } from "@/game/rules";
 import type { MatchScore } from "@/game/useGameEngine";
 
@@ -21,8 +23,10 @@ interface PlayerCardsProps {
   match: MatchScore;
   matchTarget: number;
   /** Optional reaction bubble rendered as a thought cloud over the avatar. */
-  youReaction?: string | null;
-  oppReaction?: string | null;
+  youReaction?: Reaction | null;
+  /** Bumps so re-picking the same sticker still re-animates the cloud. */
+  youReactionKey?: number;
+  oppReaction?: Reaction | null;
 }
 
 interface AvatarProps {
@@ -32,7 +36,8 @@ interface AvatarProps {
   active: boolean;
   crowned: boolean;
   score: number;
-  reaction?: string | null;
+  reaction?: Reaction | null;
+  reactionKey?: number;
 }
 
 function BugGlyph({ size, color }: { size: number; color: string }) {
@@ -88,21 +93,21 @@ function RocketGlyph({ size, color }: { size: number; color: string }) {
   );
 }
 
-function ThoughtCloud({ text, color }: { text: string; color: string }) {
+function ThoughtCloud({ reaction, color }: { reaction: Reaction; color: string }) {
   return (
     <div
       className="pointer-events-none absolute -top-3 left-1/2 z-30"
       style={{ transform: "translate(-50%, -100%)" }}
+      aria-label={reaction.label}
     >
       <div
-        className="relative flex items-center justify-center rounded-2xl border-2 bg-white px-3 py-1"
+        className="relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl border-2 bg-white px-3 py-1"
         style={{
           borderColor: "var(--ink-brown)",
-          minWidth: 44,
           boxShadow: "0 3px 8px rgba(0,0,0,0.12)",
         }}
       >
-        <span style={{ fontSize: 22, lineHeight: 1, color }}>{text}</span>
+        <ReactionSticker reaction={reaction} size={26} color={color} />
         {/* tail bubbles */}
         <span
           className="absolute h-2 w-2 rounded-full bg-white"
@@ -127,7 +132,7 @@ function ThoughtCloud({ text, color }: { text: string; color: string }) {
   );
 }
 
-function Avatar({ name, glyph, owner, active, crowned, score, reaction }: AvatarProps) {
+function Avatar({ name, glyph, owner, active, crowned, score, reaction, reactionKey = 0 }: AvatarProps) {
   const color = owner === "you" ? "var(--player-you)" : "var(--player-opp)";
   const size = 64;
   const purpleBg =
@@ -142,13 +147,15 @@ function Avatar({ name, glyph, owner, active, crowned, score, reaction }: Avatar
         <AnimatePresence>
           {reaction && (
             <motion.div
-              key={reaction}
+              key={`${reaction.id}-${reactionKey}`}
+              className="absolute inset-0 z-30"
+              style={{ overflow: "visible" }}
               initial={{ opacity: 0, y: 6, scale: 0.85 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.85 }}
               transition={{ type: "spring", stiffness: 260, damping: 18 }}
             >
-              <ThoughtCloud text={reaction} color={color} />
+              <ThoughtCloud reaction={reaction} color={color} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -229,22 +236,21 @@ function Avatar({ name, glyph, owner, active, crowned, score, reaction }: Avatar
           </svg>
         </motion.div>
       </div>
-      <div className="text-body-sm" style={{ color: "var(--ink)" }}>
+      <div className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
         {name}
       </div>
       {/* small purple score tab */}
       <div
-        className="flex items-center gap-1 rounded-full px-2 py-0.5"
+        className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
         style={{
           background: purpleBg,
           color: "var(--paper)",
           fontFamily: "var(--font-display)",
-          fontSize: 12,
-          lineHeight: 1,
+          lineHeight: 1.2,
         }}
       >
         <span style={{ fontWeight: 700 }}>{score}</span>
-        <span style={{ opacity: 0.8, fontSize: 10 }}>wins</span>
+        <span style={{ opacity: 0.8 }}>wins</span>
       </div>
     </div>
   );
@@ -258,10 +264,11 @@ export function PlayerCards({
   match,
   matchTarget,
   youReaction,
+  youReactionKey = 0,
   oppReaction,
 }: PlayerCardsProps) {
   return (
-    <div className="flex w-full items-start justify-between px-4 pt-6">
+    <div className="flex w-full items-start justify-between pt-6">
       <Avatar
         name="you"
         glyph="bug"
@@ -270,6 +277,7 @@ export function PlayerCards({
         crowned={crownedWinner === "you"}
         score={match.you}
         reaction={youReaction}
+        reactionKey={youReactionKey}
       />
       <div className="flex flex-col items-center pt-2">
         <XoxIndicator
@@ -279,7 +287,7 @@ export function PlayerCards({
           match={match}
           matchTarget={matchTarget}
         />
-        <div className="mt-1 text-body-sm" style={{ color: "var(--ink-soft)" }}>
+        <div className="mt-1 text-sm" style={{ color: "var(--ink-soft)" }}>
           first one to X-O-X wins!
         </div>
       </div>

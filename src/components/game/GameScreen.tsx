@@ -14,32 +14,66 @@ import { RoundTimer } from "./RoundTimer";
 import { Board } from "./Board";
 import { WinBadge, MiniBadge, type BadgeKind } from "./WinBadge";
 import { Confetti } from "./Confetti";
-import { ReactionWheel, REACTIONS } from "./ReactionWheel";
-import { AchievementRail, type Achievement } from "./AchievementRail";
+import { ReactionWheel } from "./ReactionWheel";
+import {
+  REACTIONS,
+  COLLISION_REACTIONS,
+  OPP_WIN_REACTIONS,
+  pickReaction,
+  type Reaction,
+} from "./reactions";
+import { AchievementRail, ACHIEVEMENT_COL_W, type Achievement } from "./AchievementRail";
 import { InkPourOverlay } from "./InkPourOverlay";
+import {
+  boardSizeForViewport,
+  MIN_BOARD_PX,
+  wheelDiameterForBoard,
+  wheelPeekWidth,
+} from "./layoutChrome";
 
 const BADGE_HOLD_MS = 1600;
 const REACTION_TTL_MS = 2600;
 
 export function GameScreen() {
   const { state, tap, reset, roundMs } = useGameEngine();
-  const [boardPx, setBoardPx] = useState(320);
+  const [boardPx, setBoardPx] = useState(MIN_BOARD_PX);
   const [badgeMinimized, setBadgeMinimized] = useState(false);
-  const [youReaction, setYouReaction] = useState<string | null>(null);
-  const [oppReaction, setOppReaction] = useState<string | null>(null);
+  const [youReaction, setYouReaction] = useState<Reaction | null>(null);
+  const [oppReaction, setOppReaction] = useState<Reaction | null>(null);
+  const [youReactionKey, setYouReactionKey] = useState(0);
   const oppTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const youTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const boardWrapRef = useRef<HTMLDivElement>(null);
+  const [wheelTop, setWheelTop] = useState(160);
+
+  const wheelDiameter = wheelDiameterForBoard(boardPx);
+  const peekW = wheelPeekWidth(wheelDiameter);
 
   useEffect(() => {
     const compute = () => {
-      const w = Math.min(window.innerWidth, 460) - 24;
-      const h = window.innerHeight - 420;
-      setBoardPx(Math.max(240, Math.min(w, h)));
+      // Centered column sizing only — wheel must not change this.
+      setBoardPx(boardSizeForViewport(window.innerWidth, window.innerHeight - 420));
     };
     compute();
     window.addEventListener("resize", compute);
     return () => window.removeEventListener("resize", compute);
   }, []);
+
+  useEffect(() => {
+    const place = () => {
+      const el = boardWrapRef.current;
+      if (!el) return;
+      const br = el.getBoundingClientRect();
+      setWheelTop(br.top + br.height / 2 - wheelDiameter / 2);
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [boardPx, wheelDiameter]);
 
   const leader =
     state.progressYou === state.progressOpp
@@ -62,6 +96,7 @@ export function GameScreen() {
   const shouldShake = badgeKind === "lose" && !badgeMinimized;
   const shouldCelebrate = badgeKind === "win" && !badgeMinimized;
   const isLoss = badgeKind === "lose";
+  const isWin = badgeKind === "win";
 
   useEffect(() => {
     if (!badgeKind) {
@@ -76,8 +111,9 @@ export function GameScreen() {
     badgeMinimized && badgeKind === "win" ? state.winner?.owner ?? null : null;
 
   // ---------- Reactions ----------
-  const handleReact = useCallback((text: string) => {
-    setYouReaction(text);
+  const handleReact = useCallback((reaction: Reaction) => {
+    setYouReaction(reaction);
+    setYouReactionKey((k) => k + 1);
     if (youTimer.current) clearTimeout(youTimer.current);
     youTimer.current = setTimeout(() => setYouReaction(null), REACTION_TTL_MS);
   }, []);
@@ -86,11 +122,11 @@ export function GameScreen() {
   useEffect(() => {
     if (state.phase !== "revealing" || !state.lastReveal) return;
     const pool = state.lastReveal.collision
-      ? ["oof", "T_T", "wow!"]
+      ? COLLISION_REACTIONS
       : state.winner?.owner === "opp"
-        ? ["gg!", "^_^", "hah"]
+        ? OPP_WIN_REACTIONS
         : REACTIONS;
-    const pick = pool[Math.floor(Math.random() * pool.length)];
+    const pick = pickReaction(pool);
     if (oppTimer.current) clearTimeout(oppTimer.current);
     setOppReaction(pick);
     oppTimer.current = setTimeout(() => setOppReaction(null), REACTION_TTL_MS);
@@ -99,7 +135,7 @@ export function GameScreen() {
   useEffect(() => {
     const iv = setInterval(() => {
       if (state.phase !== "placing") return;
-      setOppReaction((prev) => prev ?? REACTIONS[Math.floor(Math.random() * REACTIONS.length)]);
+      setOppReaction((prev) => prev ?? pickReaction(REACTIONS));
       if (oppTimer.current) clearTimeout(oppTimer.current);
       oppTimer.current = setTimeout(() => setOppReaction(null), REACTION_TTL_MS);
     }, 14000);
@@ -129,9 +165,12 @@ export function GameScreen() {
   }, [state.progressYou, state.match.you, state.phase]);
 
   return (
-    <div className="relative mx-auto flex min-h-screen w-full max-w-[460px] flex-col items-center gap-3 py-4">
+    <div
+      data-game-shell
+      className="relative mx-auto flex min-h-screen w-full max-w-[460px] flex-col items-center overflow-x-hidden py-4"
+    >
       <motion.div
-        className="relative z-30 flex w-full flex-col items-center gap-3"
+        className="relative z-30 flex w-full flex-col items-center gap-3 overflow-visible pt-8"
         animate={
           shouldShake
             ? { x: [0, -8, 8, -6, 6, -3, 3, 0], y: [0, 4, -4, 3, -3, 0, 0, 0] }
@@ -141,8 +180,6 @@ export function GameScreen() {
         }
         transition={{ duration: shouldCelebrate ? 0.9 : 0.6 }}
       >
-        {/* Colored islands (profiles) — kept above the ink-pour overlay so
-            they retain colour when the loss desaturates the world. */}
         <ColoredIsland>
           <PlayerCards
             progressYou={state.progressYou}
@@ -152,39 +189,70 @@ export function GameScreen() {
             match={state.match}
             matchTarget={state.matchTarget}
             youReaction={youReaction}
+            youReactionKey={youReactionKey}
             oppReaction={oppReaction}
           />
         </ColoredIsland>
 
-        {/* Board sits inside a colored halo so it stays vivid on loss */}
-        <div className="mt-2 flex w-full items-start justify-center">
-          <ColoredIsland padded>
-            <Board state={state} onTap={tap} boardPx={boardPx} />
-          </ColoredIsland>
+        <div ref={boardWrapRef} className="relative mt-2 flex w-full items-start justify-center">
+          <div className="relative">
+            {achievements.length > 0 && (
+              <div
+                className="absolute top-0 z-30"
+                style={{
+                  right: "100%",
+                  marginRight: 6,
+                  maxWidth: ACHIEVEMENT_COL_W,
+                }}
+              >
+                <AchievementRail achievements={achievements} />
+              </div>
+            )}
+            <ColoredIsland>
+              <Board state={state} onTap={tap} boardPx={boardPx} />
+            </ColoredIsland>
+          </div>
         </div>
 
-        <div className="mt-3 flex w-full flex-col items-center gap-3 px-4">
+        <div className="mt-3 flex w-full flex-col items-center gap-3">
           {badgeKind && badgeMinimized ? (
             <MinimizedResultCard kind={badgeKind} onReset={reset} matchOver={state.matchOver} />
           ) : (
             <BottomBar state={state} roundMs={roundMs} tentativeColor={tentativeColor} />
           )}
         </div>
-
-        {/* Reaction wheel: only during placing phase so it doesn't distract
-            during reveals or the result flow. */}
-        {state.phase === "placing" && (
-          <div className="mt-1 w-full">
-            <ReactionWheel onReact={handleReact} />
-          </div>
-        )}
       </motion.div>
 
-      {/* Achievement rail on the left edge of the game area */}
-      <AchievementRail achievements={achievements} />
+      {/* Flush to viewport right; diameter 75% of grid, ~22% peek (not gap-clamped). */}
+      <div
+        className="pointer-events-none fixed right-0 z-40"
+        style={{ top: wheelTop, width: peekW }}
+      >
+        <div className="pointer-events-auto">
+          <ReactionWheel
+            onReact={handleReact}
+            interactive={state.phase === "placing"}
+            diameter={wheelDiameter}
+            peekWidth={peekW}
+          />
+        </div>
+      </div>
 
       {/* Ink-pour desaturation overlay (below colored islands, above the rest) */}
       <InkPourOverlay active={isLoss} />
+
+      {/* Result confetti mounts once for the whole win/loss — not inside the
+          modal, so minimizing the badge does not stop / remount the rain. */}
+      {isLoss && (
+        <div className="pointer-events-none fixed inset-0 z-[45] overflow-hidden">
+          <Confetti kind="lose" />
+        </div>
+      )}
+      {isWin && (
+        <div className="pointer-events-none fixed inset-0 z-[45] overflow-hidden">
+          <Confetti kind="win" />
+        </div>
+      )}
 
       {/* Simultaneous XOX — "It's a tie" badge; scribbles hold back until it exits. */}
       <AnimatePresence>
@@ -219,8 +287,6 @@ export function GameScreen() {
             transition={{ duration: 0.25 }}
           >
             <div className="absolute inset-0 bg-black/55 backdrop-blur-[1px]" />
-            {shouldCelebrate && <Confetti kind="win" />}
-            {isLoss && <Confetti kind="lose" />}
             <div className="relative z-10 flex w-full max-w-[460px] flex-col items-center gap-6 px-6">
               <div className="relative h-[200px] w-full">
                 <WinBadge kind={badgeKind} />
@@ -229,8 +295,6 @@ export function GameScreen() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {isLoss && badgeMinimized && <Confetti kind="lose" count={22} />}
     </div>
   );
 }
@@ -353,7 +417,7 @@ function StatusCard({ text, tone }: { text: string; tone: "info" | "warn" | "ale
         <AnimatePresence mode="wait">
           <motion.span
             key={text}
-            className="text-body-md whitespace-nowrap text-center"
+            className="text-sm whitespace-nowrap text-center"
             style={{ color: textColor, fontFamily: "var(--font-display)" }}
             initial={{ y: 6, opacity: 0 }}
             animate={
@@ -407,7 +471,7 @@ function MinimizedResultCard({
         <MiniBadge kind={kind} />
         <button
           onClick={onReset}
-          className="rounded-full border-2 px-4 py-2 text-body-md transition-all duration-200 ease-in-out hover:scale-[1.04] active:scale-[0.96]"
+          className="min-h-[44px] min-w-[44px] rounded-full border-2 px-4 py-2 text-sm transition-all duration-200 ease-in-out hover:scale-[1.04] active:scale-[0.96]"
           style={{
             fontFamily: "var(--font-display)",
             fontStyle: "normal",

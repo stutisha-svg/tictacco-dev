@@ -4,7 +4,7 @@ import { GameScreen } from "@/components/game/GameScreen";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "XOX — a crayon duel" },
+      { title: "tic tac co" },
       {
         name: "description",
         content:
