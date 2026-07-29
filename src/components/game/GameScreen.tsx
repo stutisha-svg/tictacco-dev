@@ -4,7 +4,7 @@
  * Handles layout, the reveal-focus spotlight overlay, the win/lose badge
  * lifecycle (full → minimized floating card), the player-driven timer +
  * blank-turn warning, the post-win crown, the fluid ink-pour greyscale on
- * loss, reactions between players, and the achievements rail.
+ * loss, reactions between players, and achievement banners / modal.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
@@ -22,7 +22,13 @@ import {
   pickReaction,
   type Reaction,
 } from "./reactions";
-import { AchievementRail, ACHIEVEMENT_COL_W, type Achievement } from "./AchievementRail";
+import {
+  ACHIEVEMENT_DEFS,
+  achievementFromDef,
+  type Achievement,
+} from "./achievements";
+import { AchievementNudge } from "./AchievementNudge";
+import { AchievementModal } from "./AchievementModal";
 import { InkPourOverlay } from "./InkPourOverlay";
 import { TopBar } from "./TopBar";
 import { GameEnvBg } from "./GameEnvBg";
@@ -35,6 +41,8 @@ import {
 
 const BADGE_HOLD_MS = 1600;
 const REACTION_TTL_MS = 2600;
+const STATUS_CYCLE_MS = 3500;
+const UNLOCK_FLASH_MS = 5500;
 
 export function GameScreen() {
   const { state, tap, reset, roundMs } = useGameEngine();
@@ -72,8 +80,6 @@ export function GameScreen() {
       : state.progressYou > state.progressOpp
         ? ("you" as const)
         : ("opp" as const);
-
-  const tentativeColor = "var(--ink)";
 
   const badgeKind: BadgeKind | null =
     state.phase === "won"
@@ -137,27 +143,69 @@ export function GameScreen() {
     return () => clearInterval(iv);
   }, [state.phase]);
 
-  // ---------- Achievements (demo: one-away from XOX) ----------
+  // ---------- Achievements (status cycle + top nudge + modal) ----------
+  const [flashUnlockedId, setFlashUnlockedId] = useState<string | null>(null);
+  const [modalAchievement, setModalAchievement] = useState<Achievement | null>(null);
+  const seenUnlocks = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const unlockId =
+      state.match.you >= 2 && !seenUnlocks.current.has("on-a-roll")
+        ? "on-a-roll"
+        : state.match.you >= 1 && !seenUnlocks.current.has("first-sketch")
+          ? "first-sketch"
+          : null;
+    if (!unlockId) return;
+    seenUnlocks.current.add(unlockId);
+    setFlashUnlockedId(unlockId);
+    const t = setTimeout(() => setFlashUnlockedId(null), UNLOCK_FLASH_MS);
+    return () => clearTimeout(t);
+  }, [state.match.you]);
+
   const achievements = useMemo<Achievement[]>(() => {
     const list: Achievement[] = [];
-    if (state.progressYou >= 2 && state.phase !== "won") {
-      list.push({
-        id: "first-win-close",
-        title: "one to go",
-        glyph: "target",
-        progress: state.progressYou / 3,
-      });
+    if (flashUnlockedId && ACHIEVEMENT_DEFS[flashUnlockedId]) {
+      list.push(achievementFromDef(ACHIEVEMENT_DEFS[flashUnlockedId], 1, "unlocked"));
     }
-    if (state.match.you >= 1 && state.phase !== "won") {
-      list.push({
-        id: "on-a-roll",
-        title: "on a roll",
-        glyph: "spark",
-        progress: Math.min(1, state.match.you / 2),
-      });
+    if (
+      state.progressYou >= 2 &&
+      state.phase !== "won" &&
+      flashUnlockedId !== "first-win-close"
+    ) {
+      list.push(
+        achievementFromDef(
+          ACHIEVEMENT_DEFS["first-win-close"],
+          state.progressYou / 3,
+          "tracking",
+        ),
+      );
+    }
+    if (
+      state.match.you >= 1 &&
+      state.match.you < 2 &&
+      state.phase !== "won" &&
+      flashUnlockedId !== "on-a-roll"
+    ) {
+      list.push(
+        achievementFromDef(
+          ACHIEVEMENT_DEFS["on-a-roll"],
+          state.match.you / 2,
+          "tracking",
+        ),
+      );
     }
     return list;
-  }, [state.progressYou, state.match.you, state.phase]);
+  }, [state.progressYou, state.match.you, state.phase, flashUnlockedId]);
+
+  const nudgeAchievement = useMemo(() => {
+    return (
+      achievements.find((a) => a.status === "unlocked") ?? achievements[0] ?? null
+    );
+  }, [achievements]);
+
+  const openAchievement = useCallback((a: Achievement) => {
+    setModalAchievement(a);
+  }, []);
 
   return (
     <div
@@ -169,8 +217,14 @@ export function GameScreen() {
           Fixed to the frame so short content still paints the full phone height. */}
       <GameEnvBg className="!fixed inset-0 overflow-hidden sm:rounded-[24px]" />
 
-      {/* Figma top bar — flush to the frame’s top edge (no outer margin/padding). */}
-      <TopBar />
+      {/* Figma top bar + achievement drawer peeking under the tear. */}
+      <div className="relative w-full shrink-0 overflow-visible">
+        <TopBar />
+        <AchievementNudge
+          achievement={nudgeAchievement}
+          onOpen={() => nudgeAchievement && openAchievement(nudgeAchievement)}
+        />
+      </div>
 
       {/* Game chrome — overflow visible so reaction clouds can overlap the top bar */}
       <motion.div
@@ -207,18 +261,6 @@ export function GameScreen() {
           className="relative mt-2 flex w-full min-w-0 items-start justify-center overflow-visible"
         >
           <div className="relative max-w-full shrink-0">
-            {achievements.length > 0 && (
-              <div
-                className="absolute top-0 z-30"
-                style={{
-                  right: "100%",
-                  marginRight: 6,
-                  maxWidth: ACHIEVEMENT_COL_W,
-                }}
-              >
-                <AchievementRail achievements={achievements} />
-              </div>
-            )}
             <ColoredIsland>
               <Board state={state} onTap={tap} boardPx={boardPx} />
             </ColoredIsland>
@@ -231,7 +273,12 @@ export function GameScreen() {
             {badgeKind && badgeMinimized ? (
               <MinimizedResultCard kind={badgeKind} onReset={reset} matchOver={state.matchOver} />
             ) : (
-              <BottomBar state={state} roundMs={roundMs} tentativeColor={tentativeColor} />
+              <BottomBar
+                state={state}
+                roundMs={roundMs}
+                achievements={achievements}
+                onAchievementOpen={openAchievement}
+              />
             )}
           </div>
 
@@ -306,6 +353,12 @@ export function GameScreen() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AchievementModal
+        achievement={modalAchievement}
+        open={!!modalAchievement}
+        onClose={() => setModalAchievement(null)}
+      />
     </div>
   );
 }
@@ -339,32 +392,97 @@ function ColoredIsland({
   );
 }
 
+type StatusTone = "info" | "warn" | "alert" | "achievement" | "achievement-hot";
+
+interface StatusSlide {
+  key: string;
+  text: string;
+  tone: StatusTone;
+  achievement?: Achievement;
+}
+
 interface BottomBarProps {
   state: ReturnType<typeof useGameEngine>["state"];
   roundMs: number;
-  tentativeColor: string;
+  achievements: Achievement[];
+  onAchievementOpen: (a: Achievement) => void;
 }
 
-function BottomBar({ state, roundMs }: BottomBarProps) {
+function BottomBar({
+  state,
+  roundMs,
+  achievements,
+  onAchievementOpen,
+}: BottomBarProps) {
   const idleWarn = state.idleWarning && state.phase === "placing";
   const revealing = state.phase === "revealing";
   const collision = !!state.lastReveal?.collision;
   const tie = !!state.tieRound;
 
-  const status = useMemo(() => {
-    if (revealing && tie) return { text: "major collision — tiles are toast", tone: "warn" as const };
-    if (revealing && collision) return { text: "collision — tile wasted", tone: "warn" as const };
-    if (revealing) return { text: "revealing rival's move…", tone: "info" as const };
+  const gameStatus = useMemo((): StatusSlide => {
+    if (revealing && tie)
+      return { key: "game", text: "major collision — tiles are toast", tone: "warn" };
+    if (revealing && collision)
+      return { key: "game", text: "collision — tile wasted", tone: "warn" };
+    if (revealing)
+      return { key: "game", text: "revealing rival's move…", tone: "info" };
     // After 10s with no tap — same flag as board skeleton + timer outline.
-    if (idleWarn) return { text: "your move — rival is waiting", tone: "alert" as const };
-    if (state.myTentative) return { text: `tap again to change · ${state.myTentative.shape}`, tone: "info" as const };
-    if (!state.roundStarted) return { text: "tap the grid to start", tone: "info" as const };
-    return { text: "tap tile · again = O · again = clear", tone: "info" as const };
+    if (idleWarn)
+      return { key: "game", text: "your move — rival is waiting", tone: "alert" };
+    if (state.myTentative)
+      return {
+        key: "game",
+        text: `tap again to change · ${state.myTentative.shape}`,
+        tone: "info",
+      };
+    if (!state.roundStarted)
+      return { key: "game", text: "tap the grid to start", tone: "info" };
+    return { key: "game", text: "tap tile · again = O · again = clear", tone: "info" };
   }, [revealing, collision, tie, idleWarn, state.myTentative, state.roundStarted]);
+
+  const sticky = gameStatus.tone === "alert" || gameStatus.tone === "warn";
+
+  const slides = useMemo((): StatusSlide[] => {
+    if (sticky || achievements.length === 0) return [gameStatus];
+    return [
+      gameStatus,
+      ...achievements.map((a) => ({
+        key: `ach-${a.id}-${a.status}`,
+        text: a.banner,
+        tone: (a.status === "unlocked" ? "achievement-hot" : "achievement") as StatusTone,
+        achievement: a,
+      })),
+    ];
+  }, [gameStatus, achievements, sticky]);
+
+  const [slideIdx, setSlideIdx] = useState(0);
+  const slideKey = slides.map((s) => s.key).join("|");
+
+  useEffect(() => {
+    setSlideIdx(0);
+  }, [slideKey]);
+
+  useEffect(() => {
+    if (slides.length <= 1) return;
+    const t = setInterval(() => {
+      setSlideIdx((i) => (i + 1) % slides.length);
+    }, STATUS_CYCLE_MS);
+    return () => clearInterval(t);
+  }, [slides.length, slideKey]);
+
+  const current = slides[slideIdx % slides.length] ?? gameStatus;
 
   return (
     <div className="flex w-[80%] max-w-[80%] min-w-0 flex-col items-center gap-3">
-      <StatusCard text={status.text} tone={status.tone} />
+      <StatusCard
+        text={current.text}
+        tone={current.tone}
+        onClick={
+          current.achievement
+            ? () => onAchievementOpen(current.achievement!)
+            : undefined
+        }
+      />
       <div className="flex w-full min-w-0 justify-center">
         <RoundTimer
           running={
@@ -382,15 +500,44 @@ function BottomBar({ state, roundMs }: BottomBarProps) {
 }
 
 /** StatusCard — jazzy hand-drawn card for the unified round status line. */
-function StatusCard({ text, tone }: { text: string; tone: "info" | "warn" | "alert" }) {
-  const inverted = tone === "alert";
+function StatusCard({
+  text,
+  tone,
+  onClick,
+}: {
+  text: string;
+  tone: StatusTone;
+  onClick?: () => void;
+}) {
+  const inverted = tone === "alert" || tone === "achievement-hot";
+  const isAchievement = tone === "achievement" || tone === "achievement-hot";
   const accent =
-    tone === "warn" ? "var(--player-you)" : inverted ? "#fff" : "var(--ink)";
-  const bg = inverted ? "var(--ink)" : "rgba(255,255,255,0.3)";
-  const textColor = inverted ? "#fff" : "var(--ink)";
+    tone === "warn"
+      ? "var(--player-you)"
+      : isAchievement
+        ? "var(--accent-purple)"
+        : inverted
+          ? "#fff"
+          : "var(--ink)";
+  const bg =
+    tone === "achievement-hot"
+      ? "var(--accent-purple)"
+      : tone === "achievement"
+        ? "rgba(255,255,255,0.55)"
+        : inverted
+          ? "var(--ink)"
+          : "rgba(255,255,255,0.3)";
+  const textColor =
+    tone === "achievement-hot" || inverted ? "#fff" : "var(--ink)";
+  const stroke =
+    tone === "achievement" || tone === "achievement-hot"
+      ? "var(--ink)"
+      : inverted
+        ? "var(--paper)"
+        : "var(--ink)";
 
-  return (
-    <div className="relative w-full min-w-0 min-h-[44px]">
+  const inner = (
+    <>
       <svg
         width="100%"
         height={44}
@@ -404,8 +551,7 @@ function StatusCard({ text, tone }: { text: string; tone: "info" | "warn" | "ale
             <feDisplacementMap in="SourceGraphic" scale="1.6" />
           </filter>
         </defs>
-        {/* pulse ring under card when alerting */}
-        {inverted && (
+        {tone === "alert" && (
           <motion.rect
             x={2}
             y={2}
@@ -425,7 +571,7 @@ function StatusCard({ text, tone }: { text: string; tone: "info" | "warn" | "ale
           <path
             d="M 8 36 Q 4 8 22 6 L 360 4 Q 376 8 374 34 Q 372 42 356 40 L 22 42 Q 6 42 8 36 Z"
             fill={bg}
-            stroke={inverted ? "var(--paper)" : "var(--ink)"}
+            stroke={stroke}
             strokeWidth={2.2}
             strokeLinejoin="round"
           />
@@ -440,13 +586,13 @@ function StatusCard({ text, tone }: { text: string; tone: "info" | "warn" | "ale
             style={{ color: textColor, fontFamily: "var(--font-display)" }}
             initial={{ y: 6, opacity: 0 }}
             animate={
-              inverted
+              tone === "alert"
                 ? { y: 0, opacity: [1, 0.55, 1] }
                 : { y: 0, opacity: 1 }
             }
             exit={{ y: -6, opacity: 0 }}
             transition={
-              inverted
+              tone === "alert"
                 ? { opacity: { duration: 0.9, repeat: Infinity, ease: "easeInOut" } }
                 : { duration: 0.22 }
             }
@@ -455,8 +601,23 @@ function StatusCard({ text, tone }: { text: string; tone: "info" | "warn" | "ale
           </motion.span>
         </AnimatePresence>
       </div>
-    </div>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="relative w-full min-w-0 min-h-[44px] text-left transition-transform active:scale-[0.98]"
+        aria-label={`achievement details: ${text}`}
+      >
+        {inner}
+      </button>
+    );
+  }
+
+  return <div className="relative w-full min-w-0 min-h-[44px]">{inner}</div>;
 }
 
 function MinimizedResultCard({

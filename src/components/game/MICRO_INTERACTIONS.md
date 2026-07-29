@@ -35,18 +35,21 @@ First tap on a tile starts the round and the timer.
 
 ---
 
-### Waiting too long to start (~10 seconds)
+### Waiting too long (~10 seconds)
 
-If the player hasn’t tapped the grid for **10 seconds**, three things light up **together** (they should always match):
+If the player hasn’t placed a mark for **10 seconds**, three things light up **together** (they should always match). This covers:
+
+- before the first tap of a round, and  
+- after they **clear** their shape (timer paused) and sit idle  
 
 | Piece | What it does |
 | --- | --- |
 | Status bar | Dark/inverted: *your move — rival is waiting* |
-| Timer | Orange line **traces** around the outline (no fill) |
-| Grid | Soft **skeleton shimmer** over the cells, tap icon, same waiting message |
+| Timer | Orange line **traces** around the outline (frozen fill stays if mid-round) |
+| Grid | Soft **skeleton shimmer** over the cells, Figma tap icon (white fill), same waiting message |
 
 The overlay is visual only — taps still go through to the grid.  
-As soon as they tap, waiting chrome goes away and the round starts.
+Placing a shape again clears waiting chrome and resumes the timer.
 
 ---
 
@@ -150,7 +153,7 @@ The small result card should feel like the **same ribbon**, just shrunk.
 
 | Player moment | Status text | Look | Timer |
 | --- | --- | --- | --- |
-| Waiting 10s to start | your move — rival is waiting | Alert (dark bar) | Outline tracing |
+| Waiting 10s (no mark / paused) | your move — rival is waiting | Alert (dark bar) | Outline tracing |
 | Ready, under 10s | tap the grid to start | Calm info | Dashed, empty |
 | Taking a turn | tap tile · again = O · again = clear | Calm info | Filling |
 | Mark already placed | tap again to change · shape | Calm info | Filling |
@@ -179,7 +182,9 @@ The small result card should feel like the **same ribbon**, just shrunk.
 | Checkered paper | Soft background texture; doesn’t spill outside the frame |
 | Scribble | Light doodle in the upper area — atmospheric, not interactive |
 | Top bar | Torn-paper strip flush to the top; logo + menu/profile/settings |
-| Achievements | Small rewards **beside** the grid on the left — don’t shove the board |
+| Achievement nudge | Irregular paper drawer peeks under the top bar while a badge is tracked or just unlocked — tap opens detail |
+| Status bar | Game status cycles with achievement banners (~3.5s); tap a banner for the same detail modal |
+| Achievement modal | Hand-drawn sheet: how to win the badge + cycling winner pills (icon, name, country) |
 
 ---
 
@@ -190,9 +195,11 @@ The small result card should feel like the **same ribbon**, just shrunk.
 | Time to place after first tap | 5 seconds |
 | Normal reveal pause | ~2 seconds |
 | Major collision hold (reveal + badge) | ~4 seconds |
-| Idle “rival is waiting” appears | after 10 seconds with no tap |
+| Idle “rival is waiting” appears | after 10 seconds with no mark (pre-start or paused clear) |
 | Big result badge before it shrinks | ~1.6 seconds |
-| Thought cloud on screen | ~2.6 seconds |
+| Achievement status / nudge cycle | ~3.5 seconds per slide |
+| Achievement unlock flash (nudge + status) | ~5.5 seconds |
+| Achievement winner pill cycle | ~2.4 seconds |
 
 ---
 
@@ -200,6 +207,7 @@ The small result card should feel like the **same ribbon**, just shrunk.
 
 - **MAJOR COLLISION** = mid-game drama; play continues.  
 - **IT’S A TIE** = game over; nobody won.  
+- Achievement banners cycle in the status bar — don’t steal space beside the board.  
 - Waiting state = status + timer + grid shimmer **as one beat**.  
 - Waiting overlay must never block taps on the grid.  
 - Widening the reaction wheel shouldn’t make the visible arc **taller**.  
@@ -214,6 +222,7 @@ You don’t need these to design — useful when pairing with engineering:
 
 - Board & waiting shimmer → `Board.tsx`, `BoardWaitingOverlay.tsx`  
 - Status & timer → `GameScreen.tsx` (status card), `RoundTimer.tsx`  
+- Achievements → `achievements.ts`, `AchievementNudge.tsx`, `AchievementModal.tsx`, status cycle in `GameScreen.tsx`  
 - Badges & mini card → `WinBadge.tsx`, minimized card in `GameScreen.tsx`  
 - Wheel & clouds → `ReactionWheel.tsx`, `PlayerCards.tsx`  
 - Rules for wins / draws → `src/game/rules.ts`, `useGameEngine.ts`

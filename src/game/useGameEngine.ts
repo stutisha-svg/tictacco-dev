@@ -107,7 +107,8 @@ function reducer(state: GameState, action: Action): GameState {
           : null;
       const next = cycleShape(prev);
       if (next === "clear") {
-        return { ...state, myTentative: null };
+        // Pause the round clock; idle waiting can arm after 10s with no shape.
+        return { ...state, myTentative: null, idleWarning: false };
       }
       const startingNow = !state.roundStarted;
       return {
@@ -295,18 +296,29 @@ export function useGameEngine() {
   }, [state.phase, state.round, state.roundStarted, state.myTentative, state.timerStart]);
 
   useEffect(() => {
-    if (state.phase !== "placing" || state.roundStarted) {
+    if (state.phase !== "placing") {
       if (state.idleWarning) dispatch({ type: "setIdleWarning", value: false });
       return;
     }
-    // No grid tap yet — show board/status/timer waiting chrome after 10s.
+
+    // Idle waiting arms when there's no shape to play:
+    //  - before the first tap of the round, or
+    //  - after the player clears their mark (timer paused).
+    const waitingOnPlayer =
+      !state.roundStarted || (state.roundStarted && !state.myTentative);
+
+    if (!waitingOnPlayer) {
+      if (state.idleWarning) dispatch({ type: "setIdleWarning", value: false });
+      return;
+    }
+
     const t = setTimeout(
       () => dispatch({ type: "setIdleWarning", value: true }),
       IDLE_WARN_MS,
     );
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.phase, state.round, state.roundStarted]);
+  }, [state.phase, state.round, state.roundStarted, state.myTentative]);
 
   useEffect(() => {
     if (state.phase !== "revealing") return;

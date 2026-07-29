@@ -234,7 +234,10 @@ export function Board({ state, onTap, boardPx }: Props) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
           >
-            <BoardWaitingOverlay boardPx={boardPx} />
+            <BoardWaitingOverlay
+              boardPx={boardPx}
+              hint={state.roundStarted ? "place a mark to continue" : "tap the grid to start"}
+            />
           </motion.div>
         )}
       </AnimatePresence>

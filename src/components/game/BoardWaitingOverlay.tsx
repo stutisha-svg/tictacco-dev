@@ -8,9 +8,14 @@ import { SIZE } from "@/game/rules";
 
 interface Props {
   boardPx: number;
+  /** Secondary line under the waiting title. */
+  hint?: string;
 }
 
-export function BoardWaitingOverlay({ boardPx }: Props) {
+export function BoardWaitingOverlay({
+  boardPx,
+  hint = "tap the grid to start",
+}: Props) {
   const cell = boardPx / SIZE;
   const pad = Math.max(3, cell * 0.08);
 
@@ -86,66 +91,25 @@ export function BoardWaitingOverlay({ boardPx }: Props) {
           className="text-[clamp(0.85rem,3.4vw,1.05rem)] leading-tight text-[var(--ink-soft)]"
           style={{ fontFamily: "var(--font-display)" }}
         >
-          tap the grid to start
+          {hint}
         </p>
       </motion.div>
     </div>
   );
 }
 
-/** Hand-drawn tap / finger cue — not Unicode emoji. */
+/** Figma tap icon (2201:422) — white fill inside black borders. */
 function TapIcon() {
   return (
-    <svg
-      width={56}
-      height={56}
-      viewBox="0 0 56 56"
-      fill="none"
-      aria-hidden
-      className="drop-shadow-sm"
-    >
-      <g filter="url(#tap-rough)">
-        {/* ripple rings */}
-        <circle
-          cx={22}
-          cy={18}
-          r={10}
-          stroke="var(--ink-brown)"
-          strokeWidth={2.2}
-          strokeOpacity={0.35}
-          fill="none"
-        />
-        <circle
-          cx={22}
-          cy={18}
-          r={5}
-          stroke="var(--ink)"
-          strokeWidth={2}
-          fill="rgba(255,255,255,0.85)"
-        />
-        {/* finger / hand */}
-        <path
-          d="M26 22c1.2-3.5 4.8-5.2 8.2-3.8 2.2.9 3.6 3.1 3.5 5.5l-.4 14.2c-.1 2.8-2.4 5-5.2 5.1h-.3c-2.6.1-4.8-1.9-5.1-4.5l-1.2-9.2c-.3-1.9-2-3.2-3.9-3.1-1.6.1-2.9 1.3-3.1 2.9l-.8 7.4"
-          stroke="var(--ink)"
-          strokeWidth={2.4}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="rgba(255,255,255,0.92)"
-        />
-        <path
-          d="M18.5 34.5c-.4 2.8.4 5.6 2.4 7.6 2.2 2.2 5.3 3.2 8.4 2.8"
-          stroke="var(--ink-brown)"
-          strokeWidth={2.2}
-          strokeLinecap="round"
-          fill="none"
-        />
-      </g>
-      <defs>
-        <filter id="tap-rough" x="-20%" y="-20%" width="140%" height="140%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" />
-          <feDisplacementMap in="SourceGraphic" scale="1.2" />
-        </filter>
-      </defs>
-    </svg>
+    <div className="relative size-11 overflow-clip drop-shadow-sm" aria-hidden>
+      <img
+        src="/game/tap-icon.svg"
+        alt=""
+        draggable={false}
+        width={44}
+        height={44}
+        className="block size-full max-w-none"
+      />
+    </div>
   );
 }

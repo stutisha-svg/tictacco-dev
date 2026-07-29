@@ -103,9 +103,9 @@ export function RoundTimer({
   const zigZagPath = useMemo(() => buildZigZagPath(usable, 3.1), [usable]);
   const clipWidth = Math.max(0, usable * pct);
   const hasFill = pct > 0.002;
-  // Paused mid-round still shows fill; only true pre-start idle is dashed.
+  // True pre-start idle is empty; mid-round pause keeps fill but can still warn.
   const emptyIdle = !running && !hasFill;
-  const tracing = !!idleWarning && emptyIdle;
+  const tracing = !!idleWarning && !running;
   const perimeter = useMemo(() => roundedRectPerimeter(RW, RH, RADIUS), []);
 
   return (
