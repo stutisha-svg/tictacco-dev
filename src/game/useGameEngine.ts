@@ -64,7 +64,8 @@ type Action =
 const ROUND_MS = 5000;
 const REVEAL_MS = 1800;
 const TIE_HOLD_MS = 2200;
-const IDLE_WARN_MS = 8000;
+/** How long with no grid tap (pre-start) before waiting chrome appears. */
+const IDLE_WARN_MS = 10_000;
 const MATCH_TOTAL = 3; // play all 3 games; most wins takes it
 
 const initial = (): GameState => ({
@@ -244,6 +245,7 @@ export function useGameEngine() {
       if (state.idleWarning) dispatch({ type: "setIdleWarning", value: false });
       return;
     }
+    // No grid tap yet — show board/status/timer waiting chrome after 10s.
     const t = setTimeout(
       () => dispatch({ type: "setIdleWarning", value: true }),
       IDLE_WARN_MS,

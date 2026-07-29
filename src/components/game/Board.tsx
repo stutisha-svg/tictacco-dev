@@ -5,6 +5,7 @@ import { SIZE } from "@/game/rules";
 import { CrayonDefs } from "./CrayonDefs";
 import { Shape } from "./Shape";
 import { SmokeScribble } from "./SmokeScribble";
+import { BoardWaitingOverlay } from "./BoardWaitingOverlay";
 
 interface Props {
   state: GameState;
@@ -15,6 +16,7 @@ interface Props {
 export function Board({ state, onTap, boardPx }: Props) {
   const cell = boardPx / SIZE;
   const revealing = state.phase === "revealing";
+  const waiting = state.phase === "placing" && state.idleWarning;
 
   // STRAIGHT grid lines — crayon texture comes from the SVG filter, not from
   // wobbled coordinates.
@@ -34,6 +36,7 @@ export function Board({ state, onTap, boardPx }: Props) {
   const winSet = new Set(state.winner?.line ?? []);
 
   return (
+    <div className="relative" style={{ width: boardPx, height: boardPx }}>
     <svg
       width={boardPx}
       height={boardPx}
@@ -220,6 +223,22 @@ export function Board({ state, onTap, boardPx }: Props) {
         );
       })}
     </svg>
+
+      <AnimatePresence>
+        {waiting && (
+          <motion.div
+            key="board-waiting"
+            className="pointer-events-none absolute inset-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            <BoardWaitingOverlay boardPx={boardPx} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 

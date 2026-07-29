@@ -349,10 +349,12 @@ function BottomBar({ state, roundMs }: BottomBarProps) {
     if (revealing && tie) return { text: "both scored — tiles are toast", tone: "warn" as const };
     if (revealing && collision) return { text: "collision — tile wasted", tone: "warn" as const };
     if (revealing) return { text: "revealing rival's move…", tone: "info" as const };
+    // After 10s with no tap — same flag as board skeleton + timer outline.
     if (idleWarn) return { text: "your move — rival is waiting", tone: "alert" as const };
     if (state.myTentative) return { text: `tap again to change · ${state.myTentative.shape}`, tone: "info" as const };
+    if (!state.roundStarted) return { text: "tap the grid to start", tone: "info" as const };
     return { text: "tap tile · again = O · again = clear", tone: "info" as const };
-  }, [revealing, collision, tie, idleWarn, state.myTentative]);
+  }, [revealing, collision, tie, idleWarn, state.myTentative, state.roundStarted]);
 
   return (
     <div className="flex w-full min-w-0 flex-col items-center gap-3">
@@ -459,7 +461,7 @@ function MinimizedResultCard({
   return (
     <motion.div
       key="mini-card"
-      className="flex w-full min-w-0 flex-col items-center gap-3"
+      className="flex w-[80%] max-w-[80%] min-w-0 flex-col items-center gap-3"
       initial={{ y: 30, opacity: 0, scale: 0.9 }}
       animate={{ y: 0, opacity: 1, scale: 1 }}
       exit={{ y: 30, opacity: 0 }}
