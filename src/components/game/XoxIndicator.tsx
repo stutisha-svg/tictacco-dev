@@ -1,16 +1,9 @@
 /**
  * XoxIndicator — thermometer-style progress rig.
  *
- * A hand-drawn (slightly imperfect) rectangle acts as a horizontal
- * "thermometer" that fills from BOTH sides simultaneously:
- *   - left side fills with the player's colour proportional to progressYou/3
- *   - right side fills with the rival's colour proportional to progressOpp/3
- *
- * Three XOX glyphs sit on top of the tube in light grey; whichever side is
- * closer to X-O-X gets its own three glyphs highlighted as the fill rises
- * past them. Physics uses a soft spring so the liquid feels weighty.
- *
- * A small "best of 3" tab sits above the tube showing the match tally.
+ * A hand-drawn rectangle fills from both sides during play. On a win, the
+ * whole tube floods with the winner’s colour and the XOX glyphs turn white.
+ * After the result badge collapses, the fill gently pulses in and out.
  */
 import { motion } from "motion/react";
 import { CrayonDefs } from "./CrayonDefs";
@@ -24,6 +17,10 @@ interface Props {
   leader: Owner | null;
   match: MatchScore;
   matchTarget: number;
+  /** Winning player — tube fills solid with their colour; glyphs go white. */
+  winner?: Owner | null;
+  /** After the big result badge shrinks — keep pulsing the full fill. */
+  celebrate?: boolean;
 }
 
 const SEQ = ["X", "O", "X"] as const;
@@ -33,12 +30,10 @@ const TUBE_H = 56;
 
 /** Wobbly-quad path for the thermometer body — opposite long sides are NOT parallel. */
 const TUBE_PATH = (() => {
-  // corners: TL, TR, BR, BL slightly perturbed
   const tl = [4, 6];
   const tr = [TUBE_W - 5, 3];
   const br = [TUBE_W - 3, TUBE_H - 5];
   const bl = [6, TUBE_H - 3];
-  // control points for gentle wobble on each side
   return (
     `M ${tl[0]} ${tl[1]} ` +
     `Q ${TUBE_W / 2} ${tl[1] - 3} ${tr[0]} ${tr[1]} ` +
@@ -54,13 +49,17 @@ export function XoxIndicator({
   leader,
   match,
   matchTarget,
+  winner = null,
+  celebrate = false,
 }: Props) {
   const youPct = Math.min(1, progressYou / 3);
   const oppPct = Math.min(1, progressOpp / 3);
-  // Cap the two fills so they can't overlap in the middle visually.
   const maxFillPct = 0.48;
   const youFillW = TUBE_W * youPct * maxFillPct;
   const oppFillW = TUBE_W * oppPct * maxFillPct;
+
+  const won = winner === "you" || winner === "opp";
+  const winColor = winner === "you" ? "var(--player-you)" : "var(--player-opp)";
 
   return (
     <div className="flex flex-col items-center">
@@ -87,7 +86,6 @@ export function XoxIndicator({
           </filter>
         </defs>
 
-        {/* wobbly outline — darker beige/brown */}
         <g filter="url(#tube-rough)">
           <path
             d={TUBE_PATH}
@@ -98,55 +96,99 @@ export function XoxIndicator({
           />
         </g>
 
-        {/* left (you) fill */}
-        <g clipPath="url(#tube-clip)" filter="url(#liquid-grain)">
-          <motion.rect
-            x={0}
-            y={0}
-            height={TUBE_H}
-            initial={{ width: 0 }}
-            animate={{ width: youFillW }}
-            transition={{ type: "spring", stiffness: 90, damping: 16, mass: 1.1 }}
-            fill="var(--player-you)"
-            opacity={0.85}
-          />
-          {/* liquid meniscus wiggle */}
-          <motion.rect
-            x={0}
-            y={TUBE_H * 0.15}
-            height={TUBE_H * 0.7}
-            fill="var(--player-you)"
-            opacity={0.35}
-            initial={{ width: 0 }}
-            animate={{ width: youFillW + 4 }}
-            transition={{ type: "spring", stiffness: 70, damping: 14, mass: 1.4 }}
-          />
-        </g>
+        {!won && (
+          <>
+            <g clipPath="url(#tube-clip)" filter="url(#liquid-grain)">
+              <motion.rect
+                x={0}
+                y={0}
+                height={TUBE_H}
+                initial={{ width: 0 }}
+                animate={{ width: youFillW }}
+                transition={{ type: "spring", stiffness: 90, damping: 16, mass: 1.1 }}
+                fill="var(--player-you)"
+                opacity={0.85}
+              />
+              <motion.rect
+                x={0}
+                y={TUBE_H * 0.15}
+                height={TUBE_H * 0.7}
+                fill="var(--player-you)"
+                opacity={0.35}
+                initial={{ width: 0 }}
+                animate={{ width: youFillW + 4 }}
+                transition={{ type: "spring", stiffness: 70, damping: 14, mass: 1.4 }}
+              />
+            </g>
 
-        {/* right (opp) fill */}
-        <g clipPath="url(#tube-clip)" filter="url(#liquid-grain)">
-          <motion.rect
-            x={TUBE_W}
-            y={0}
-            height={TUBE_H}
-            initial={{ width: 0, x: TUBE_W }}
-            animate={{ width: oppFillW, x: TUBE_W - oppFillW }}
-            transition={{ type: "spring", stiffness: 90, damping: 16, mass: 1.1 }}
-            fill="var(--player-opp)"
-            opacity={0.85}
-          />
-          <motion.rect
-            y={TUBE_H * 0.15}
-            height={TUBE_H * 0.7}
-            fill="var(--player-opp)"
-            opacity={0.35}
-            initial={{ width: 0, x: TUBE_W }}
-            animate={{ width: oppFillW + 4, x: TUBE_W - oppFillW - 4 }}
-            transition={{ type: "spring", stiffness: 70, damping: 14, mass: 1.4 }}
-          />
-        </g>
+            <g clipPath="url(#tube-clip)" filter="url(#liquid-grain)">
+              <motion.rect
+                x={TUBE_W}
+                y={0}
+                height={TUBE_H}
+                initial={{ width: 0, x: TUBE_W }}
+                animate={{ width: oppFillW, x: TUBE_W - oppFillW }}
+                transition={{ type: "spring", stiffness: 90, damping: 16, mass: 1.1 }}
+                fill="var(--player-opp)"
+                opacity={0.85}
+              />
+              <motion.rect
+                y={TUBE_H * 0.15}
+                height={TUBE_H * 0.7}
+                fill="var(--player-opp)"
+                opacity={0.35}
+                initial={{ width: 0, x: TUBE_W }}
+                animate={{ width: oppFillW + 4, x: TUBE_W - oppFillW - 4 }}
+                transition={{ type: "spring", stiffness: 70, damping: 14, mass: 1.4 }}
+              />
+            </g>
+          </>
+        )}
 
-        {/* XOX glyphs stacked centrally on top of the tube */}
+        {/* Win: full tube flood — pulses in/out after the badge collapses. */}
+        {won && (
+          <g clipPath="url(#tube-clip)" filter="url(#liquid-grain)">
+            <motion.rect
+              x={0}
+              y={0}
+              width={TUBE_W}
+              height={TUBE_H}
+              fill={winColor}
+              style={{ transformOrigin: `${TUBE_W / 2}px ${TUBE_H / 2}px` }}
+              initial={{ opacity: 0, scaleX: 0.35 }}
+              animate={
+                celebrate
+                  ? { opacity: [0.5, 1, 0.5], scaleX: [0.82, 1, 0.82] }
+                  : { opacity: 0.92, scaleX: 1 }
+              }
+              transition={
+                celebrate
+                  ? { duration: 1.4, repeat: Infinity, ease: "easeInOut" }
+                  : { type: "spring", stiffness: 70, damping: 16, mass: 1.1 }
+              }
+            />
+            <motion.rect
+              x={0}
+              y={TUBE_H * 0.12}
+              width={TUBE_W}
+              height={TUBE_H * 0.76}
+              fill={winColor}
+              style={{ transformOrigin: `${TUBE_W / 2}px ${TUBE_H / 2}px` }}
+              initial={{ opacity: 0 }}
+              animate={
+                celebrate
+                  ? { opacity: [0.15, 0.4, 0.15], scaleX: [0.82, 1, 0.82] }
+                  : { opacity: 0.35, scaleX: 1 }
+              }
+              transition={
+                celebrate
+                  ? { duration: 1.4, repeat: Infinity, ease: "easeInOut", delay: 0.06 }
+                  : { duration: 0.45 }
+              }
+            />
+          </g>
+        )}
+
         <g>
           {SEQ.map((s, i) => {
             const slotSize = 32;
@@ -156,7 +198,21 @@ export function XoxIndicator({
             const x = startX + i * (slotSize + gap);
             const y = (TUBE_H - slotSize) / 2;
 
-            // Which side/owner is closer to this slot?
+            if (won) {
+              return (
+                <g key={i} transform={`translate(${x}, ${y})`}>
+                  <Shape
+                    shape={s}
+                    owner={winner!}
+                    size={slotSize}
+                    draw={true}
+                    seed={i + 33}
+                    color="#fff"
+                  />
+                </g>
+              );
+            }
+
             let owner: Owner | null = null;
             let lit = false;
             if (i === 0) {
@@ -165,15 +221,12 @@ export function XoxIndicator({
             } else if (i === 2) {
               owner = "opp";
               lit = progressOpp >= 1;
-            } else {
-              // middle slot: whichever leader has advanced through their two side slots
-              if (leader === "you" && progressYou >= 2) {
-                owner = "you";
-                lit = true;
-              } else if (leader === "opp" && progressOpp >= 2) {
-                owner = "opp";
-                lit = true;
-              }
+            } else if (leader === "you" && progressYou >= 2) {
+              owner = "you";
+              lit = true;
+            } else if (leader === "opp" && progressOpp >= 2) {
+              owner = "opp";
+              lit = true;
             }
 
             const color =
@@ -191,7 +244,6 @@ export function XoxIndicator({
                 {lit && owner && (
                   <Shape shape={s} owner={owner} size={slotSize} draw={true} seed={i + 33} />
                 )}
-                {/* tiny colored glow when this slot fills */}
                 {lit && (
                   <motion.circle
                     cx={slotSize / 2}
@@ -213,16 +265,12 @@ export function XoxIndicator({
   );
 }
 
-/** MatchTab — purple pill showing "best of 3" plus 3 tally slots for game winners. */
 function MatchTab({ match, target }: { match: MatchScore; target: number }) {
   const slots: (Owner | null)[] = Array.from({ length: target }).map(
     (_, i) => match.history[i] ?? null,
   );
   return (
-    <div
-      className="relative"
-      style={{ fontFamily: "var(--font-display)" }}
-    >
+    <div className="relative" style={{ fontFamily: "var(--font-display)" }}>
       <svg width={196} height={30} viewBox="0 0 196 30" className="overflow-visible">
         <defs>
           <filter id="tab-rough" x="-5%" y="-20%" width="110%" height="140%">
@@ -231,7 +279,6 @@ function MatchTab({ match, target }: { match: MatchScore; target: number }) {
           </filter>
         </defs>
         <g filter="url(#tab-rough)">
-          {/* purple filled tab, no outline stroke */}
           <path
             d="M 6 24 Q 4 5 20 4 L 176 3 Q 192 4 190 24 Z"
             fill="var(--accent-purple)"
@@ -249,7 +296,6 @@ function MatchTab({ match, target }: { match: MatchScore; target: number }) {
           best of {target}
         </text>
       </svg>
-      {/* tally slots on the right — one per game */}
       <div className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
         {slots.map((winner, i) => {
           const bg =
@@ -274,4 +320,3 @@ function MatchTab({ match, target }: { match: MatchScore; target: number }) {
     </div>
   );
 }
-

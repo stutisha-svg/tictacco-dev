@@ -101,6 +101,10 @@ export function GameScreen() {
   const crownedWinner =
     badgeMinimized && badgeKind === "win" ? state.winner?.owner ?? null : null;
 
+  const tubeWinner =
+    state.phase === "won" && state.winner ? state.winner.owner : null;
+  const tubeCelebrate = badgeMinimized && !!tubeWinner;
+
   // ---------- Reactions ----------
   const handleReact = useCallback((reaction: Reaction) => {
     setYouReaction(reaction);
@@ -189,6 +193,8 @@ export function GameScreen() {
               crownedWinner={crownedWinner}
               match={state.match}
               matchTarget={state.matchTarget}
+              tubeWinner={tubeWinner}
+              tubeCelebrate={tubeCelebrate}
               youReaction={youReaction}
               youReactionKey={youReactionKey}
               oppReaction={oppReaction}
@@ -361,7 +367,11 @@ function BottomBar({ state, roundMs }: BottomBarProps) {
       <StatusCard text={status.text} tone={status.tone} />
       <div className="flex w-full min-w-0 justify-center">
         <RoundTimer
-          running={state.phase === "placing" && state.roundStarted}
+          running={
+            state.phase === "placing" &&
+            state.roundStarted &&
+            !!state.myTentative
+          }
           duration={roundMs}
           keyId={state.round}
           idleWarning={idleWarn}
@@ -469,7 +479,7 @@ function MinimizedResultCard({
       style={{ filter: "none", zIndex: 50, position: "relative" }}
     >
       <div
-        className="relative flex w-full min-h-[44px] min-w-0 items-center justify-between gap-3 rounded-2xl border-2 px-4 py-3"
+        className="relative flex w-full min-h-[44px] min-w-0 items-center gap-2 rounded-2xl border-2 px-3 py-2"
         style={{
           borderColor: "var(--ink)",
           background: "var(--paper)",
@@ -477,12 +487,12 @@ function MinimizedResultCard({
           filter: "none",
         }}
       >
-        <div className="flex min-h-[44px] min-w-0 flex-1 items-center">
+        <div className="flex min-h-[44px] min-w-0 flex-1 items-center overflow-hidden pr-1">
           <MiniBadge kind={kind} />
         </div>
         <button
           onClick={onReset}
-          className="min-h-[44px] min-w-[44px] shrink-0 rounded-full border-2 px-4 py-2 text-sm transition-all duration-200 ease-in-out hover:scale-[1.04] active:scale-[0.96]"
+          className="min-h-[44px] min-w-[44px] shrink-0 rounded-full border-2 px-3 py-2 text-sm transition-all duration-200 ease-in-out hover:scale-[1.04] active:scale-[0.96]"
           style={{
             fontFamily: "var(--font-display)",
             fontStyle: "normal",

@@ -22,6 +22,10 @@ interface PlayerCardsProps {
   crownedWinner?: Owner | null;
   match: MatchScore;
   matchTarget: number;
+  /** Winning owner while phase is won — floods the XOX tube. */
+  tubeWinner?: Owner | null;
+  /** Pulse the tube fill after the result badge collapses. */
+  tubeCelebrate?: boolean;
   /** Optional reaction bubble rendered as a thought cloud over the avatar. */
   youReaction?: Reaction | null;
   /** Bumps so re-picking the same sticker still re-animates the cloud. */
@@ -252,6 +256,8 @@ export function PlayerCards({
   crownedWinner,
   match,
   matchTarget,
+  tubeWinner = null,
+  tubeCelebrate = false,
   youReaction,
   youReactionKey = 0,
   oppReaction,
@@ -275,6 +281,8 @@ export function PlayerCards({
           leader={leader}
           match={match}
           matchTarget={matchTarget}
+          winner={tubeWinner}
+          celebrate={tubeCelebrate}
         />
         <div className="mt-1 text-sm" style={{ color: "var(--ink-soft)" }}>
           first one to X-O-X wins!

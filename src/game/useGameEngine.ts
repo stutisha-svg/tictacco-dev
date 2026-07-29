@@ -250,8 +250,39 @@ export function useGameEngine() {
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  // Round clock — pauses while the player has cleared their shape (no tentative).
+  const roundClock = useRef({
+    start: null as number | null,
+    pausedAccum: 0,
+    pauseStarted: null as number | null,
+  });
+
   useEffect(() => {
-    if (state.phase !== "placing" || !state.roundStarted) return;
+    if (state.phase !== "placing" || !state.roundStarted) {
+      roundClock.current = { start: null, pausedAccum: 0, pauseStarted: null };
+      return;
+    }
+
+    const clock = roundClock.current;
+    if (clock.start == null) {
+      clock.start = state.timerStart ?? Date.now();
+      clock.pausedAccum = 0;
+      clock.pauseStarted = null;
+    }
+
+    // No shape on the board — pause the lock countdown.
+    if (!state.myTentative) {
+      if (clock.pauseStarted == null) clock.pauseStarted = Date.now();
+      return;
+    }
+
+    if (clock.pauseStarted != null) {
+      clock.pausedAccum += Date.now() - clock.pauseStarted;
+      clock.pauseStarted = null;
+    }
+
+    const elapsed = Date.now() - clock.start - clock.pausedAccum;
+    const remaining = Math.max(0, ROUND_MS - elapsed);
     const t = setTimeout(() => {
       const s = stateRef.current;
       const opp = selectBotMove(s.board, "opp", {
@@ -259,9 +290,9 @@ export function useGameEngine() {
         collisionBias: 0.4,
       });
       dispatch({ type: "lock", oppMove: opp });
-    }, ROUND_MS);
+    }, remaining);
     return () => clearTimeout(t);
-  }, [state.phase, state.round, state.roundStarted]);
+  }, [state.phase, state.round, state.roundStarted, state.myTentative, state.timerStart]);
 
   useEffect(() => {
     if (state.phase !== "placing" || state.roundStarted) {

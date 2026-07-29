@@ -58,23 +58,40 @@ export function RoundTimer({
 }: RoundTimerProps) {
   const [pct, setPct] = useState(0);
   const startRef = useRef<number | null>(null);
+  const elapsedRef = useRef(0);
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     setPct(0);
     startRef.current = null;
+    elapsedRef.current = 0;
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
   }, [keyId]);
 
   useEffect(() => {
-    if (!running) return;
-    if (startRef.current === null) startRef.current = Date.now();
+    if (!running) {
+      // Freeze: remember how far we got so resume doesn't skip ahead.
+      if (startRef.current != null) {
+        elapsedRef.current = Math.min(
+          duration,
+          Date.now() - startRef.current,
+        );
+        startRef.current = null;
+        setPct(Math.min(1, elapsedRef.current / duration));
+      }
+      return;
+    }
+
+    // Resume or start — wall clock shifted so paused time doesn't count.
+    startRef.current = Date.now() - elapsedRef.current;
     const tick = () => {
-      const start = startRef.current!;
+      const start = startRef.current;
+      if (start == null) return;
       const elapsed = Date.now() - start;
+      elapsedRef.current = elapsed;
       const p = Math.min(1, elapsed / duration);
       setPct(p);
-      if (p < 1 && running) rafRef.current = requestAnimationFrame(tick);
+      if (p < 1) rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => {
@@ -85,8 +102,10 @@ export function RoundTimer({
   const usable = BAR_WIDTH - PAD_X * 2;
   const zigZagPath = useMemo(() => buildZigZagPath(usable, 3.1), [usable]);
   const clipWidth = Math.max(0, usable * pct);
-  const idle = !running;
-  const tracing = !!idleWarning && idle;
+  const hasFill = pct > 0.002;
+  // Paused mid-round still shows fill; only true pre-start idle is dashed.
+  const emptyIdle = !running && !hasFill;
+  const tracing = !!idleWarning && emptyIdle;
   const perimeter = useMemo(() => roundedRectPerimeter(RW, RH, RADIUS), []);
 
   return (
@@ -117,7 +136,7 @@ export function RoundTimer({
           </clipPath>
         </defs>
 
-        {/* Base outline — dashed when idle, solid when running; faint guide when tracing */}
+        {/* Base outline — dashed only when empty; solid while running or paused with fill */}
         <g filter="url(#timer-outline)">
           <rect
             x={RX}
@@ -130,7 +149,7 @@ export function RoundTimer({
             stroke={tracing ? "color-mix(in oklab, var(--player-you) 45%, var(--ink-brown))" : "var(--ink)"}
             strokeWidth={tracing ? 2.2 : 2.5}
             strokeLinecap="round"
-            strokeDasharray={idle && !tracing ? "6 5" : undefined}
+            strokeDasharray={emptyIdle && !tracing ? "6 5" : undefined}
             opacity={tracing ? 0.45 : 0.9}
           />
         </g>
@@ -166,8 +185,8 @@ export function RoundTimer({
           </g>
         )}
 
-        {/* Chunky ink squiggle — only while the round timer is running */}
-        {running && (
+        {/* Squiggle fill — stays visible while paused (frozen progress). */}
+        {hasFill && (
           <g clipPath="url(#timer-fill-clip)" filter="url(#timer-scribble)">
             <path
               d={zigZagPath}
@@ -175,7 +194,7 @@ export function RoundTimer({
               strokeWidth={7}
               strokeLinecap="round"
               fill="none"
-              opacity={0.95}
+              opacity={running ? 0.95 : 0.85}
             />
             <path
               d={zigZagPath}
@@ -183,7 +202,7 @@ export function RoundTimer({
               strokeWidth={3}
               strokeLinecap="round"
               fill="none"
-              opacity={0.7}
+              opacity={running ? 0.7 : 0.6}
             />
           </g>
         )}

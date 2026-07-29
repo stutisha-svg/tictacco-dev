@@ -135,54 +135,56 @@ export function WinBadge({ kind }: WinBadgeProps) {
 }
 
 /**
- * MiniBadge — reduced-size version of the WinBadge, for the persistent
- * "play again" card. Reuses the ribbon graphics so it feels like the same
- * artifact minimizing down.
+ * MiniBadge — compact ribbon for the persistent result card.
+ * Sized to sit beside “play again” without overlapping (~80% frame cards).
  */
 export function MiniBadge({ kind }: WinBadgeProps) {
   const config = BADGE_CONFIG[kind];
-  const width = 180;
-  const height = 96;
+  const width = 118;
+  const height = 44;
+  // Longer titles (YOU LOST / IT'S A TIE) need a slightly smaller glyph.
+  const titleSize = kind === "lose" || kind === "tie" ? 16 : kind === "win" ? 18 : 14;
   return (
     <svg
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      className="overflow-visible"
+      className="max-h-11 w-auto max-w-full shrink overflow-hidden"
+      aria-hidden
     >
       <defs>
         <filter id="mini-badge-rough" x="-10%" y="-10%" width="120%" height="120%">
           <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="7" />
-          <feDisplacementMap in="SourceGraphic" scale="1.6" />
+          <feDisplacementMap in="SourceGraphic" scale="1.2" />
         </filter>
       </defs>
       <g filter="url(#mini-badge-rough)">
         <path
-          d={`M 10 20 L ${width - 10} 16 L ${width - 16} ${height - 14} L 16 ${height - 10} Z`}
+          d={`M 6 8 L ${width - 6} 6 L ${width - 8} ${height - 6} L 8 ${height - 5} Z`}
           fill="var(--paper)"
           stroke="var(--ink)"
-          strokeWidth={3}
+          strokeWidth={2.2}
           strokeLinejoin="round"
         />
         <path
-          d={`M 18 28 L ${width - 18} 24 L ${width - 24} ${height - 22} L 24 ${height - 18} Z`}
+          d={`M 11 12 L ${width - 11} 10 L ${width - 13} ${height - 10} L 13 ${height - 9} Z`}
           fill="none"
           stroke={config.fillVar}
-          strokeWidth={2}
-          strokeDasharray="5 4"
+          strokeWidth={1.5}
+          strokeDasharray="4 3"
         />
       </g>
       <text
         x={width / 2}
-        y={height / 2 + 2}
+        y={height / 2 + 1}
         textAnchor="middle"
         dominantBaseline="central"
         fontFamily={BADGE_FONT}
         fontWeight={700}
-        fontSize={30}
+        fontSize={titleSize}
         fill={config.fillVar}
         stroke="var(--ink)"
-        strokeWidth={1}
+        strokeWidth={0.8}
         paintOrder="stroke"
         transform={`rotate(${config.tilt / 2} ${width / 2} ${height / 2})`}
       >

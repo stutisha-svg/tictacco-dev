@@ -14,6 +14,8 @@ interface ShapeProps {
   draw?: boolean;
   delay?: number;
   seed?: number;
+  /** Optional override (e.g. white glyphs on a filled win tube). */
+  color?: string;
 }
 
 function colorForOwner(owner: Owner): string {
@@ -28,8 +30,9 @@ export function Shape({
   draw = true,
   delay = 0,
   seed = 0,
+  color,
 }: ShapeProps) {
-  const stroke = colorForOwner(owner);
+  const stroke = color ?? colorForOwner(owner);
   const opacity = tentative ? 0.45 : 1;
   const jitter = (n: number) =>
     (Math.sin(seed * 12.9898 + n * 78.233) * 43758.5453) % 1;
