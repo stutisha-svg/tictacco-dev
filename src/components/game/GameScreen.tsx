@@ -158,8 +158,8 @@ export function GameScreen() {
   return (
     <div
       data-game-shell
-      className="relative mx-auto flex min-h-full w-full min-w-0 max-w-full flex-col items-center overflow-visible bg-transparent pb-4"
-      style={{ minHeight: "100%", flex: "1 1 auto" }}
+      className="relative mx-auto flex min-h-full w-full min-w-0 max-w-full flex-1 flex-col items-center overflow-visible bg-transparent pb-0"
+      style={{ minHeight: "100%" }}
     >
       {/* Fills the mobile frame; paper is overscaled so opaque area covers full height.
           Fixed to the frame so short content still paints the full phone height. */}
@@ -170,7 +170,7 @@ export function GameScreen() {
 
       {/* Game chrome — overflow visible so reaction clouds can overlap the top bar */}
       <motion.div
-        className="relative z-30 -mt-[20px] flex w-full min-w-0 flex-col items-center gap-3 overflow-visible pt-0"
+        className="relative z-30 -mt-[20px] flex w-full min-w-0 flex-1 flex-col items-center gap-3 overflow-visible pt-0"
         animate={
           shouldShake
             ? { x: [0, -8, 8, -6, 6, -3, 3, 0], y: [0, 4, -4, 3, -3, 0, 0, 0] }
@@ -219,25 +219,27 @@ export function GameScreen() {
           </div>
         </div>
 
-        {/* Wheel peek — width matches board so the arc is centered under the grid. */}
-        <div
-          className="relative z-40 mx-auto shrink-0 overflow-hidden"
-          style={{ height: peekH, width: boardPx }}
-        >
-          <ReactionWheel
-            onReact={handleReact}
-            interactive={state.phase === "placing"}
-            diameter={wheelDiameter}
-            peekHeight={peekH}
-          />
-        </div>
+        {/* Status + timer, then wheel flush to the bottom edge of the screen. */}
+        <div className="mt-auto flex w-full min-w-0 flex-col items-center">
+          <div className="relative z-50 mb-2 flex w-full min-w-0 flex-col items-center gap-3 px-0">
+            {badgeKind && badgeMinimized ? (
+              <MinimizedResultCard kind={badgeKind} onReset={reset} matchOver={state.matchOver} />
+            ) : (
+              <BottomBar state={state} roundMs={roundMs} tentativeColor={tentativeColor} />
+            )}
+          </div>
 
-        <div className="relative z-50 mt-2 flex w-full min-w-0 flex-col items-center gap-3">
-          {badgeKind && badgeMinimized ? (
-            <MinimizedResultCard kind={badgeKind} onReset={reset} matchOver={state.matchOver} />
-          ) : (
-            <BottomBar state={state} roundMs={roundMs} tentativeColor={tentativeColor} />
-          )}
+          <div
+            className="relative z-40 mx-auto w-full shrink-0 overflow-hidden"
+            style={{ height: peekH, width: boardPx, marginBottom: 0 }}
+          >
+            <ReactionWheel
+              onReact={handleReact}
+              interactive={state.phase === "placing"}
+              diameter={wheelDiameter}
+              peekHeight={peekH}
+            />
+          </div>
         </div>
       </motion.div>
 

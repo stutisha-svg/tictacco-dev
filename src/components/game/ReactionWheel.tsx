@@ -1,8 +1,7 @@
 /**
- * ReactionWheel — sticker circle peeking out from under the board bottom.
- * Circle center sits under the grid; only a fixed-height bottom arc is visible.
- * Stickers are packed tightly around the full circumference (catalog repeats)
- * so several are always pickable in the peek — never a single lonely icon.
+ * ReactionWheel — sticker circle flush to the bottom of the screen.
+ * Horizontally flipped; only the top arc peeks above the bottom edge.
+ * Stickers are packed tightly around the full circumference (catalog repeats).
  * Drag horizontally to spin; tap to react.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -90,11 +89,11 @@ export function ReactionWheel({
   const slots = useMemo(() => {
     const spacing = BTN * SPACING_FRAC;
     const packed = Math.max(1, Math.round((2 * Math.PI * R) / spacing));
-    // At least two full catalog loops so the ring never looks sparse.
     const count = Math.max(packed, REACTIONS.length * 2);
     return Array.from({ length: count }, (_, i) => {
       const reaction = REACTIONS[i % REACTIONS.length]!;
-      const a = Math.PI / 2 + (i / count) * Math.PI * 2;
+      // Top of circle (−π/2) is the visible arc at the screen bottom.
+      const a = -Math.PI / 2 + (i / count) * Math.PI * 2;
       return {
         key: `${reaction.id}-${i}`,
         reaction,
@@ -108,17 +107,19 @@ export function ReactionWheel({
     const el = peekRef.current;
     if (!el) return { x: 0, y: 0 };
     const r = el.getBoundingClientRect();
-    return { x: r.left + CX, y: r.top + (peekH - DIAM) + CY };
-  }, [CX, CY, DIAM, peekH]);
+    // Top-aligned circle + horizontal flip (scaleX −1): visual center is still mid-box.
+    return { x: r.left + r.width / 2, y: r.top + CY };
+  }, [CY]);
 
   const stickerAt = useCallback(
     (x: number, y: number): Reaction | null => {
       const c = hub();
-      const dx = x - c.x;
+      // Undo horizontal flip for hit-testing in local circle space.
+      const dx = -(x - c.x);
       const dy = y - c.y;
       if (Math.abs(Math.hypot(dx, dy) - R) > BTN * 0.85) return null;
       let ang = Math.atan2(dy, dx) - (rotRef.current * Math.PI) / 180;
-      let n = ang - Math.PI / 2;
+      let n = ang + Math.PI / 2;
       const two = Math.PI * 2;
       n = ((n % two) + two) % two;
       const idx = Math.round((n / two) * slots.length) % slots.length;
@@ -156,8 +157,9 @@ export function ReactionWheel({
     }
     if (!d.moved) return;
 
+    // Negate dx because the wheel is scaleX(-1).
     const dx = e.clientX - d.lastX;
-    const delta = dx * pxToDeg * (1 + COAST_BOOST);
+    const delta = -dx * pxToDeg * (1 + COAST_BOOST);
     const now = performance.now();
     const dt = Math.max(8, now - d.lastT);
     velRef.current = Math.max(-55, Math.min(55, (delta * 16) / dt));
@@ -195,7 +197,8 @@ export function ReactionWheel({
     }
   };
 
-  const circleTop = peekH - DIAM;
+  // Top of circle peeks above the bottom edge; rest is clipped below.
+  const circleTop = 0;
 
   return (
     <div
@@ -205,9 +208,9 @@ export function ReactionWheel({
         width: DIAM,
         height: peekH,
         overflow: "hidden",
-        // Center the large circle in the board-width peek slot.
         marginLeft: "50%",
-        transform: "translateX(-50%)",
+        // Center under the board column + flip horizontally.
+        transform: "translateX(-50%) scaleX(-1)",
         opacity: interactive ? 1 : 0.4,
         pointerEvents: interactive ? "auto" : "none",
         touchAction: "none",
@@ -264,7 +267,8 @@ export function ReactionWheel({
               border: "2.5px solid var(--ink)",
               background: "#fff",
               boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
-              transform: `rotate(${-rot}deg)`,
+              // Counter-rotate + un-flip so marks stay upright / readable.
+              transform: `rotate(${-rot}deg) scaleX(-1)`,
             }}
             aria-hidden
           >

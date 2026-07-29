@@ -16,17 +16,17 @@ alwaysApply: true
 ## Reaction wheel
 
 - **Visible arc width** = **88% of grid** (`WHEEL_CHORD_FRAC = 0.88`). Diameter is **derived** from chord + peek — never set `diameter = 0.88 * board` (shallow peek makes that look identical to smaller fractions).
+- Wheel sits **flush at the bottom of the screen** (under status/timer), horizontally flipped; top arc visible. **No** bottom margin/padding.
 - Peek height locked via `WHEEL_PEEK_OF_BOARD`. **Do not** grow peek when widening the arc.
-- Circle center sits under the grid; only the bottom arc is visible; rest clipped.
 - Stickers evenly spaced around the full ring so rotation always brings pickable icons into the arc.
-- Status card + timer sit **below** the peek strip — no overlap (peek container `overflow: hidden`; status above in z-order).
+- Status card + timer sit **above** the wheel — no overlap.
 - Drag horizontally to spin; tap to react. No “drag” labels, no star, no Unicode emoji.
 
 ## Forbidden
 
 - `playW = viewport − peek` (recenters/resizes the whole UI)
 - Growing peek height when widening the wheel
-- Docking the wheel to the right edge (old layout)
+- Docking the wheel under the board (old layout) or leaving bottom padding under the wheel
 - Showing the full circle / unclipped remainder
 - Letting the wheel overlap the status bar
 - Moving rewards above the grid
