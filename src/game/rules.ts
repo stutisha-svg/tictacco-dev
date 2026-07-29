@@ -102,3 +102,39 @@ export function bestProgress(board: Board, owner: Owner): number {
   }
   return best;
 }
+
+/** True when no empty live tiles remain. */
+export function isBoardFull(board: Board): boolean {
+  return board.every((t) => t.dead || t.placements.length > 0);
+}
+
+/** True when `owner` still has at least one completable X-O-X line. */
+export function canPlayerStillWin(board: Board, owner: Owner): boolean {
+  const wanted: ShapeKind[] = ["X", "O", "X"];
+  for (const line of LINES) {
+    let viable = true;
+    for (let k = 0; k < 3; k++) {
+      const t = board[line[k]];
+      if (t.dead) {
+        viable = false;
+        break;
+      }
+      const o = tileOwner(t);
+      if (o && !(o.owner === owner && o.shape === wanted[k])) {
+        viable = false;
+        break;
+      }
+    }
+    if (viable) return true;
+  }
+  return false;
+}
+
+/**
+ * Stalemate: board full, or neither player can still form X-O-X.
+ * Call only when nobody just scored a win.
+ */
+export function isDraw(board: Board): boolean {
+  if (isBoardFull(board)) return true;
+  return !canPlayerStillWin(board, "you") && !canPlayerStillWin(board, "opp");
+}

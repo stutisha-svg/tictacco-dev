@@ -73,8 +73,10 @@ tictacco/
 | `ReactionWheel.tsx` | Sticker wheel docked to the **viewport right** (drag + inertia) |
 | `reactions.ts` / `ReactionSticker.tsx` | Reaction catalog + renderer (kaomoji interim; `assetSrc` ready) |
 | `layoutChrome.ts` / `LAYOUT.md` | Board/wheel sizing constants and layout notes |
+| `MICRO_INTERACTIONS.md` | Game scenarios, UI states, and chrome micro-interactions |
 | `AchievementRail.tsx` | Reward badges **left of the grid** |
-| `WinBadge.tsx` / `Confetti.tsx` | Win/lose/tie chrome + continuous confetti |
+| `WinBadge.tsx` / `Confetti.tsx` | Win/lose/tie/collision chrome + continuous confetti |
+| `BoardWaitingOverlay.tsx` | Idle skeleton + tap cue (synced with status/timer) |
 | `InkPourOverlay.tsx` / `DeadScribble.tsx` / … | Loss / dead-cell flourishes |
 
 ---

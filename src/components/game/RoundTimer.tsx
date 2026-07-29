@@ -96,7 +96,7 @@ export function RoundTimer({
         height={BAR_HEIGHT + 6}
         viewBox={`0 0 ${BAR_WIDTH} ${BAR_HEIGHT + 6}`}
         preserveAspectRatio="none"
-        className="max-w-[360px]"
+        className="w-full"
         aria-label={tracing ? "rival is waiting" : "round timer"}
         role="progressbar"
         aria-valuemin={0}

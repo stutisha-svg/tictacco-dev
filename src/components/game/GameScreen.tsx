@@ -259,11 +259,11 @@ export function GameScreen() {
         </div>
       )}
 
-      {/* Simultaneous XOX — "It's a tie" badge; scribbles hold back until it exits. */}
+      {/* Simultaneous XOX — mid-game "major collision"; play continues after. */}
       <AnimatePresence>
         {state.tieRound && (
           <motion.div
-            key="tie-overlay"
+            key="collision-overlay"
             className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -273,7 +273,7 @@ export function GameScreen() {
             <div className="absolute inset-0 bg-black/40" />
             <div className="relative z-10 flex w-full min-w-0 flex-col items-center gap-6 px-4">
               <div className="relative aspect-[2/1] w-full max-h-[200px]">
-                <WinBadge kind="tie" />
+                <WinBadge kind="collision" />
               </div>
             </div>
           </motion.div>
@@ -346,7 +346,7 @@ function BottomBar({ state, roundMs }: BottomBarProps) {
   const tie = !!state.tieRound;
 
   const status = useMemo(() => {
-    if (revealing && tie) return { text: "both scored — tiles are toast", tone: "warn" as const };
+    if (revealing && tie) return { text: "major collision — tiles are toast", tone: "warn" as const };
     if (revealing && collision) return { text: "collision — tile wasted", tone: "warn" as const };
     if (revealing) return { text: "revealing rival's move…", tone: "info" as const };
     // After 10s with no tap — same flag as board skeleton + timer outline.
@@ -357,7 +357,7 @@ function BottomBar({ state, roundMs }: BottomBarProps) {
   }, [revealing, collision, tie, idleWarn, state.myTentative, state.roundStarted]);
 
   return (
-    <div className="flex w-full min-w-0 flex-col items-center gap-3">
+    <div className="flex w-[80%] max-w-[80%] min-w-0 flex-col items-center gap-3">
       <StatusCard text={status.text} tone={status.tone} />
       <div className="flex w-full min-w-0 justify-center">
         <RoundTimer

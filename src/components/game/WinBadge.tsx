@@ -8,7 +8,7 @@
  */
 import { motion } from "motion/react";
 
-export type BadgeKind = "win" | "lose" | "tie";
+export type BadgeKind = "win" | "lose" | "tie" | "collision";
 
 interface WinBadgeProps {
   kind: BadgeKind;
@@ -19,12 +19,23 @@ interface BadgeConfig {
   subtitle: string;
   fillVar: string;
   tilt: number;
+  /** Title font size — longer labels need to scale down. */
+  titleSize: number;
 }
 
 const BADGE_CONFIG: Record<BadgeKind, BadgeConfig> = {
-  win: { title: "YOU WIN!", subtitle: "epic sketch", fillVar: "var(--player-you)", tilt: -6 },
-  lose: { title: "YOU LOST", subtitle: "rival got it", fillVar: "var(--player-opp)", tilt: 5 },
-  tie: { title: "IT'S A TIE", subtitle: "scribble draw", fillVar: "var(--ink-soft)", tilt: -3 },
+  win: { title: "YOU WIN!", subtitle: "epic sketch", fillVar: "var(--player-you)", tilt: -6, titleSize: 64 },
+  lose: { title: "YOU LOST", subtitle: "rival got it", fillVar: "var(--player-opp)", tilt: 5, titleSize: 64 },
+  /** End of game — board full or no XOX left for either side. */
+  tie: { title: "IT'S A TIE", subtitle: "nobody scored", fillVar: "var(--ink-soft)", tilt: -3, titleSize: 64 },
+  /** Mid-game simultaneous XOX — play continues after tiles are scribbled. */
+  collision: {
+    title: "MAJOR COLLISION",
+    subtitle: "keep playing",
+    fillVar: "var(--player-you)",
+    tilt: 4,
+    titleSize: 42,
+  },
 };
 
 // Use the Caveat family for badges specifically (per design direction).
@@ -98,7 +109,7 @@ export function WinBadge({ kind }: WinBadgeProps) {
             dominantBaseline="central"
             fontFamily={BADGE_FONT}
             fontWeight={700}
-            fontSize={64}
+            fontSize={config.titleSize}
             fill={config.fillVar}
             stroke="var(--ink)"
             strokeWidth={1.5}

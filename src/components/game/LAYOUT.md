@@ -1,6 +1,7 @@
 # Game chrome layout
 
 See `.cursor/rules/game-chrome-layout.mdc`.
+For game scenarios, badges, and micro-interactions see [`MICRO_INTERACTIONS.md`](./MICRO_INTERACTIONS.md).
 
 - Wheel peeks from **bottom of the screen** (under status/timer), horizontally flipped, flush — no bottom margin/padding.
 - **Visible arc width** = **88%** of grid (`WHEEL_CHORD_FRAC`). Full circle diameter is larger (solved from chord + peek).

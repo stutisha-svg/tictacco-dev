@@ -7,6 +7,7 @@ import {
   bestProgress,
   emptyBoard,
   findAllWins,
+  isDraw,
 } from "./rules";
 import { selectBotMove } from "./bot";
 
@@ -170,6 +171,10 @@ function reducer(state: GameState, action: Action): GameState {
         };
         matchOver =
           match.you + match.opp >= state.matchTarget;
+      } else if (isDraw(board)) {
+        // Board full or neither side can still form X-O-X — same end UX as "it's a tie".
+        phase = "won";
+        winner = null;
       }
 
       return {
@@ -195,6 +200,24 @@ function reducer(state: GameState, action: Action): GameState {
           state.tieRound!.tiles.includes(i) ? { ...t, dead: true } : t,
         );
       }
+      const progressYou = bestProgress(board, "you");
+      const progressOpp = bestProgress(board, "opp");
+      // After scribbling a simultaneous XOX, the board may be a stalemate.
+      if (isDraw(board)) {
+        return {
+          ...state,
+          board,
+          phase: "won",
+          winner: null,
+          myTentative: null,
+          oppMove: null,
+          tieRound: null,
+          roundStarted: false,
+          idleWarning: false,
+          progressYou,
+          progressOpp,
+        };
+      }
       return {
         ...state,
         board,
@@ -206,8 +229,8 @@ function reducer(state: GameState, action: Action): GameState {
         duration: ROUND_MS,
         oppMove: null,
         tieRound: null,
-        progressYou: bestProgress(board, "you"),
-        progressOpp: bestProgress(board, "opp"),
+        progressYou,
+        progressOpp,
       };
     }
     case "softReset": {

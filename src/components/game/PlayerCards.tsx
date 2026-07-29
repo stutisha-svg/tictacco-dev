@@ -257,7 +257,7 @@ export function PlayerCards({
   oppReaction,
 }: PlayerCardsProps) {
   return (
-    <div className="flex w-full items-start justify-between pt-6">
+    <div className="flex w-full items-start justify-between px-2 pt-6">
       <Avatar
         name="you"
         glyph="bug"

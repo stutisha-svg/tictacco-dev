@@ -125,7 +125,7 @@ function LiveTileDemo() {
 
 function BadgeDemo() {
   const [kind, setKind] = useState<BadgeKind>("win");
-  const options: BadgeKind[] = ["win", "lose", "tie"];
+  const options: BadgeKind[] = ["win", "lose", "tie", "collision"];
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="flex gap-2">
