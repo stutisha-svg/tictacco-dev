@@ -24,11 +24,13 @@ import {
 } from "./reactions";
 import { AchievementRail, ACHIEVEMENT_COL_W, type Achievement } from "./AchievementRail";
 import { InkPourOverlay } from "./InkPourOverlay";
+import { TopBar } from "./TopBar";
+import { GameEnvBg } from "./GameEnvBg";
 import {
   boardSizeForViewport,
   MIN_BOARD_PX,
   wheelDiameterForBoard,
-  wheelPeekWidth,
+  wheelPeekHeightForBoard,
 } from "./layoutChrome";
 
 const BADGE_HOLD_MS = 1600;
@@ -44,18 +46,18 @@ export function GameScreen() {
   const oppTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const youTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const boardWrapRef = useRef<HTMLDivElement>(null);
-  const [wheelTop, setWheelTop] = useState(160);
 
   const wheelDiameter = wheelDiameterForBoard(boardPx);
-  const peekW = wheelPeekWidth(wheelDiameter);
+  const peekH = wheelPeekHeightForBoard(boardPx);
 
   useEffect(() => {
     const compute = () => {
       // Centered column sizing only — wheel must not change this.
+      // Budget leaves room for wheel peek + status/timer under the board.
       setBoardPx(
         boardSizeForViewport(
           Math.min(window.innerWidth, 390),
-          window.innerHeight - 420,
+          window.innerHeight - 480,
         ),
       );
     };
@@ -63,26 +65,6 @@ export function GameScreen() {
     window.addEventListener("resize", compute);
     return () => window.removeEventListener("resize", compute);
   }, []);
-
-  useEffect(() => {
-    const place = () => {
-      const el = boardWrapRef.current;
-      if (!el) return;
-      const frame = el.closest("[data-mobile-frame]") as HTMLElement | null;
-      const br = el.getBoundingClientRect();
-      const fr = frame?.getBoundingClientRect();
-      // fixed is contained by the phone frame — offset relative to the frame, not the viewport.
-      const topInFrame = fr ? br.top - fr.top : br.top;
-      setWheelTop(topInFrame + br.height / 2 - wheelDiameter / 2);
-    };
-    place();
-    window.addEventListener("resize", place);
-    window.addEventListener("scroll", place, true);
-    return () => {
-      window.removeEventListener("resize", place);
-      window.removeEventListener("scroll", place, true);
-    };
-  }, [boardPx, wheelDiameter]);
 
   const leader =
     state.progressYou === state.progressOpp
@@ -176,10 +158,19 @@ export function GameScreen() {
   return (
     <div
       data-game-shell
-      className="relative mx-auto flex min-h-full w-full min-w-0 max-w-full flex-col items-center overflow-x-hidden py-4"
+      className="relative mx-auto flex min-h-full w-full min-w-0 max-w-full flex-col items-center overflow-visible bg-transparent pb-4"
+      style={{ minHeight: "100%", flex: "1 1 auto" }}
     >
+      {/* Fills the mobile frame; paper is overscaled so opaque area covers full height.
+          Fixed to the frame so short content still paints the full phone height. */}
+      <GameEnvBg className="!fixed inset-0 overflow-hidden sm:rounded-[24px]" />
+
+      {/* Figma top bar — flush to the frame’s top edge (no outer margin/padding). */}
+      <TopBar />
+
+      {/* Game chrome — overflow visible so reaction clouds can overlap the top bar */}
       <motion.div
-        className="relative z-30 flex w-full min-w-0 flex-col items-center gap-3 overflow-x-hidden pt-8"
+        className="relative z-30 -mt-[20px] flex w-full min-w-0 flex-col items-center gap-3 overflow-visible pt-0"
         animate={
           shouldShake
             ? { x: [0, -8, 8, -6, 6, -3, 3, 0], y: [0, 4, -4, 3, -3, 0, 0, 0] }
@@ -189,7 +180,7 @@ export function GameScreen() {
         }
         transition={{ duration: shouldCelebrate ? 0.9 : 0.6 }}
       >
-        <div className="flex w-full min-w-0 flex-col items-center">
+        <div className="relative z-[60] flex w-full min-w-0 flex-col items-center overflow-visible">
           <ColoredIsland>
             <PlayerCards
               progressYou={state.progressYou}
@@ -207,7 +198,7 @@ export function GameScreen() {
 
         <div
           ref={boardWrapRef}
-          className="relative mt-2 flex w-full min-w-0 items-start justify-center overflow-x-hidden"
+          className="relative mt-2 flex w-full min-w-0 items-start justify-center overflow-visible"
         >
           <div className="relative max-w-full shrink-0">
             {achievements.length > 0 && (
@@ -228,7 +219,20 @@ export function GameScreen() {
           </div>
         </div>
 
-        <div className="mt-3 flex w-full min-w-0 flex-col items-center gap-3">
+        {/* Wheel peek — width matches board so the arc is centered under the grid. */}
+        <div
+          className="relative z-40 mx-auto shrink-0 overflow-hidden"
+          style={{ height: peekH, width: boardPx }}
+        >
+          <ReactionWheel
+            onReact={handleReact}
+            interactive={state.phase === "placing"}
+            diameter={wheelDiameter}
+            peekHeight={peekH}
+          />
+        </div>
+
+        <div className="relative z-50 mt-2 flex w-full min-w-0 flex-col items-center gap-3">
           {badgeKind && badgeMinimized ? (
             <MinimizedResultCard kind={badgeKind} onReset={reset} matchOver={state.matchOver} />
           ) : (
@@ -236,21 +240,6 @@ export function GameScreen() {
           )}
         </div>
       </motion.div>
-
-      {/* Flush to frame right; diameter 75% of grid, ~22% peek (not gap-clamped). */}
-      <div
-        className="pointer-events-none fixed right-0 z-40"
-        style={{ top: wheelTop, width: peekW }}
-      >
-        <div className="pointer-events-auto">
-          <ReactionWheel
-            onReact={handleReact}
-            interactive={state.phase === "placing"}
-            diameter={wheelDiameter}
-            peekWidth={peekW}
-          />
-        </div>
-      </div>
 
       {/* Ink-pour desaturation overlay (below colored islands, above the rest) */}
       <InkPourOverlay active={isLoss} />
@@ -328,7 +317,7 @@ function ColoredIsland({
 }) {
   return (
     <div
-      className="relative w-full max-w-full min-w-0"
+      className="relative w-full max-w-full min-w-0 overflow-visible"
       style={{
         zIndex: 40,
         padding: padded ? 6 : 0,
@@ -382,9 +371,9 @@ function BottomBar({ state, roundMs }: BottomBarProps) {
 function StatusCard({ text, tone }: { text: string; tone: "info" | "warn" | "alert" }) {
   const inverted = tone === "alert";
   const accent =
-    tone === "warn" ? "var(--player-you)" : inverted ? "var(--paper)" : "var(--ink)";
-  const bg = inverted ? "var(--ink)" : "var(--paper)";
-  const textColor = inverted ? "var(--paper)" : "var(--ink)";
+    tone === "warn" ? "var(--player-you)" : inverted ? "#fff" : "var(--ink)";
+  const bg = inverted ? "var(--ink)" : "rgba(255,255,255,0.3)";
+  const textColor = inverted ? "#fff" : "var(--ink)";
 
   return (
     <div className="relative w-full min-w-0 min-h-[44px]">

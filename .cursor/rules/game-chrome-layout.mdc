@@ -1,5 +1,5 @@
 ---
-description: Layout rules for tic tac co — centered column, wheel 75% of grid
+description: Layout rules for tic tac co — centered column, wheel peeks under board
 globs: src/components/game/**
 alwaysApply: true
 ---
@@ -8,24 +8,27 @@ alwaysApply: true
 
 ## Centered column (do not break this)
 
-- The app is locked in a **390px** mobile frame (`__root.tsx`) with `overflow-x-hidden`.
+- The app is locked in a **390px** mobile frame (`__root.tsx`) with `overflow-x-clip`.
 - Profiles, grid, and controls are a **single centered column** inside that frame.
 - **Never** set column width to `100vw − peek` or otherwise resize/off-center the stack for the wheel.
 - Board size from `boardSizeForViewport` only — wheel must not feed back into board size. Cap board at **390px**.
 
 ## Reaction wheel
 
-- Diameter = **75% of grid height** (`WHEEL_GRID_FRAC = 0.75`). **Do not** shrink this to ~55% — that looked tiny. Only change if the user explicitly asks.
-- Visible peek = **~20–25%** of circle width (`WHEEL_VISIBLE_FRAC ≈ 0.22`). Do not raise toward 40–50%.
-- Use the **full ideal peek** from that fraction — do **not** clamp the peek down to a tiny gap (that makes the wheel look microscopic).
-- Dock with `position: fixed; right: 0` (viewport). No extra right margin.
-- Drag + inertia; tap to react. No “drag” labels, no star, no Unicode emoji.
+- **Visible arc width** = **88% of grid** (`WHEEL_CHORD_FRAC = 0.88`). Diameter is **derived** from chord + peek — never set `diameter = 0.88 * board` (shallow peek makes that look identical to smaller fractions).
+- Peek height locked via `WHEEL_PEEK_OF_BOARD`. **Do not** grow peek when widening the arc.
+- Circle center sits under the grid; only the bottom arc is visible; rest clipped.
+- Stickers evenly spaced around the full ring so rotation always brings pickable icons into the arc.
+- Status card + timer sit **below** the peek strip — no overlap (peek container `overflow: hidden`; status above in z-order).
+- Drag horizontally to spin; tap to react. No “drag” labels, no star, no Unicode emoji.
 
 ## Forbidden
 
 - `playW = viewport − peek` (recenters/resizes the whole UI)
-- Shrinking diameter to ~55% “to be safe”
-- Clamping peek to near-zero based on board gap
+- Growing peek height when widening the wheel
+- Docking the wheel to the right edge (old layout)
+- Showing the full circle / unclipped remainder
+- Letting the wheel overlap the status bar
 - Moving rewards above the grid
 - Cells below 44px for side chrome
 

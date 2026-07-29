@@ -1,23 +1,28 @@
 /**
- * ReactionWheel — full sticker circle docked to the viewport right edge.
- * ~20–25% of width peeks (or less if parent clamps to clear the grid).
- * Diameter is 55% of grid, set by parent. Drag to spin; tap to react.
+ * ReactionWheel — sticker circle peeking out from under the board bottom.
+ * Circle center sits under the grid; only a fixed-height bottom arc is visible.
+ * Stickers are packed tightly around the full circumference (catalog repeats)
+ * so several are always pickable in the peek — never a single lonely icon.
+ * Drag horizontally to spin; tap to react.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { REACTIONS, type Reaction } from "./reactions";
 import { ReactionSticker } from "./ReactionSticker";
-import { wheelPeekWidth } from "./layoutChrome";
 
 interface Props {
   onReact: (reaction: Reaction) => void;
   interactive?: boolean;
-  /** Full circle diameter — 55% of grid. */
+  /** Full circle diameter — derived so the visible arc spans ~88% of grid width. */
   diameter: number;
-  /** Visible strip; parent may clamp so the wheel never covers the grid. */
-  peekWidth?: number;
+  /** Visible peek height (locked; must not grow with diameter). */
+  peekHeight: number;
 }
 
+/** Chip size — keep ≥44 for tap targets; tight gap packs many into the arc. */
 const BTN = 44;
+const STICKER = 26;
+/** Center-to-center spacing as a multiple of BTN (< ~1.15 = closely placed). */
+const SPACING_FRAC = 1.06;
 const DRAG_THRESHOLD_PX = 4;
 const FRICTION = 0.97;
 const MIN_VEL = 0.05;
@@ -27,17 +32,13 @@ export function ReactionWheel({
   onReact,
   interactive = true,
   diameter,
-  peekWidth,
+  peekHeight,
 }: Props) {
   const DIAM = Math.max(1, diameter);
-  const R = (DIAM - BTN) / 2;
+  const R = Math.max(1, (DIAM - BTN) / 2);
   const CX = DIAM / 2;
   const CY = DIAM / 2;
-  const peekW = Math.max(
-    0,
-    Math.min(DIAM, peekWidth ?? wheelPeekWidth(DIAM)),
-  );
-  const peekH = DIAM;
+  const peekH = Math.max(0, Math.min(DIAM, peekHeight));
   const pxToDeg = 180 / (Math.PI * R);
 
   const [rot, setRot] = useState(0);
@@ -51,7 +52,7 @@ export function ReactionWheel({
     capturing: false,
     moved: false,
     pointerId: null as number | null,
-    lastY: 0,
+    lastX: 0,
     lastT: 0,
     startX: 0,
     startY: 0,
@@ -85,12 +86,30 @@ export function ReactionWheel({
 
   useEffect(() => () => cancelRaf(), [cancelRaf]);
 
+  /** Pack stickers around the ring; repeat REACTIONS to fill the circumference. */
+  const slots = useMemo(() => {
+    const spacing = BTN * SPACING_FRAC;
+    const packed = Math.max(1, Math.round((2 * Math.PI * R) / spacing));
+    // At least two full catalog loops so the ring never looks sparse.
+    const count = Math.max(packed, REACTIONS.length * 2);
+    return Array.from({ length: count }, (_, i) => {
+      const reaction = REACTIONS[i % REACTIONS.length]!;
+      const a = Math.PI / 2 + (i / count) * Math.PI * 2;
+      return {
+        key: `${reaction.id}-${i}`,
+        reaction,
+        x: CX + R * Math.cos(a),
+        y: CY + R * Math.sin(a),
+      };
+    });
+  }, [CX, CY, R]);
+
   const hub = useCallback(() => {
     const el = peekRef.current;
     if (!el) return { x: 0, y: 0 };
     const r = el.getBoundingClientRect();
-    return { x: r.left + CX, y: r.top + CY };
-  }, [CX, CY]);
+    return { x: r.left + CX, y: r.top + (peekH - DIAM) + CY };
+  }, [CX, CY, DIAM, peekH]);
 
   const stickerAt = useCallback(
     (x: number, y: number): Reaction | null => {
@@ -99,13 +118,13 @@ export function ReactionWheel({
       const dy = y - c.y;
       if (Math.abs(Math.hypot(dx, dy) - R) > BTN * 0.85) return null;
       let ang = Math.atan2(dy, dx) - (rotRef.current * Math.PI) / 180;
-      let n = ang + Math.PI / 2;
+      let n = ang - Math.PI / 2;
       const two = Math.PI * 2;
       n = ((n % two) + two) % two;
-      const idx = Math.round((n / two) * REACTIONS.length) % REACTIONS.length;
-      return REACTIONS[idx] ?? null;
+      const idx = Math.round((n / two) * slots.length) % slots.length;
+      return slots[idx]?.reaction ?? null;
     },
-    [hub, R],
+    [hub, R, slots],
   );
 
   const onDown = (e: React.PointerEvent) => {
@@ -117,7 +136,7 @@ export function ReactionWheel({
       capturing: false,
       moved: false,
       pointerId: e.pointerId,
-      lastY: e.clientY,
+      lastX: e.clientX,
       lastT: performance.now(),
       startX: e.clientX,
       startY: e.clientY,
@@ -137,12 +156,12 @@ export function ReactionWheel({
     }
     if (!d.moved) return;
 
-    const dy = e.clientY - d.lastY;
-    const delta = dy * pxToDeg * (1 + COAST_BOOST);
+    const dx = e.clientX - d.lastX;
+    const delta = dx * pxToDeg * (1 + COAST_BOOST);
     const now = performance.now();
     const dt = Math.max(8, now - d.lastT);
     velRef.current = Math.max(-55, Math.min(55, (delta * 16) / dt));
-    d.lastY = e.clientY;
+    d.lastX = e.clientX;
     d.lastT = now;
     d.sessionDelta += delta;
     applyRot(rotRef.current + delta);
@@ -176,26 +195,19 @@ export function ReactionWheel({
     }
   };
 
-  const positions = useMemo(() => {
-    const n = REACTIONS.length;
-    return REACTIONS.map((reaction, i) => {
-      const a = -Math.PI / 2 + (i / n) * Math.PI * 2;
-      return {
-        reaction,
-        x: CX + R * Math.cos(a),
-        y: CY + R * Math.sin(a),
-      };
-    });
-  }, [CX, CY, R]);
+  const circleTop = peekH - DIAM;
 
   return (
     <div
       ref={peekRef}
-      className="select-none touch-none"
+      className="relative select-none touch-none"
       style={{
-        width: peekW,
+        width: DIAM,
         height: peekH,
         overflow: "hidden",
+        // Center the large circle in the board-width peek slot.
+        marginLeft: "50%",
+        transform: "translateX(-50%)",
         opacity: interactive ? 1 : 0.4,
         pointerEvents: interactive ? "auto" : "none",
         touchAction: "none",
@@ -211,7 +223,7 @@ export function ReactionWheel({
         style={{
           position: "absolute",
           left: 0,
-          top: 0,
+          top: circleTop,
           width: DIAM,
           height: DIAM,
           transformOrigin: `${CX}px ${CY}px`,
@@ -232,17 +244,17 @@ export function ReactionWheel({
               cx={CX}
               cy={CY}
               r={R + 10}
-              fill="var(--paper)"
+              fill="rgba(255,255,255,0.3)"
               stroke="var(--ink-brown)"
               strokeWidth={2.4}
-              opacity={0.95}
+              opacity={1}
             />
           </g>
         </svg>
 
-        {positions.map(({ reaction, x, y }) => (
+        {slots.map(({ key, reaction, x, y }) => (
           <div
-            key={reaction.id}
+            key={key}
             className="absolute flex items-center justify-center rounded-full bg-white"
             style={{
               width: BTN,
@@ -250,12 +262,13 @@ export function ReactionWheel({
               left: x - BTN / 2,
               top: y - BTN / 2,
               border: "2.5px solid var(--ink)",
+              background: "#fff",
               boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
               transform: `rotate(${-rot}deg)`,
             }}
             aria-hidden
           >
-            <ReactionSticker reaction={reaction} size={22} />
+            <ReactionSticker reaction={reaction} size={STICKER} />
           </div>
         ))}
       </div>

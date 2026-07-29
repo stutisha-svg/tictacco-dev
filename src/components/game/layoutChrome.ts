@@ -2,7 +2,10 @@
  * Board + reaction wheel sizing.
  * See LAYOUT.md and .cursor/rules/game-chrome-layout.mdc.
  *
- * The stacked game column stays centered. The wheel does not resize it.
+ * Peek height is locked to the board. Diameter is solved so the *visible*
+ * arc chord under the grid spans WHEEL_CHORD_FRAC of the grid — a shallow
+ * peek of a larger circle. Setting diameter = 0.95×board looks unchanged
+ * because only a thin slice shows.
  */
 import { SIZE } from "@/game/rules";
 
@@ -11,21 +14,61 @@ export const MIN_BOARD_PX = SIZE * MIN_CELL_PX; // 352
 /** Cap to the locked 390px mobile shell so the board never overflows the frame. */
 export const MAX_BOARD_PX = 390;
 
-/** Visible fraction of circle width from the right edge (~20–25%). Do not raise. */
-export const WHEEL_VISIBLE_FRAC = 0.22;
+/**
+ * Visible arc width as a fraction of grid width (what you actually see).
+ * This is not the full circle diameter — diameter is derived from this + peek.
+ */
+export const WHEEL_CHORD_FRAC = 0.88;
 
 /**
- * Diameter as a fraction of grid height.
- * 55% read as tiny; keep at 75%. Do not drop this without an explicit ask.
+ * Peek height as a fraction of board — locked so the arc does not grow taller.
+ * (Same as the old 0.3 × 0.75 diameter peek.)
  */
-export const WHEEL_GRID_FRAC = 0.75;
+export const WHEEL_PEEK_OF_BOARD = 0.3 * 0.75; // 0.225
 
-export function wheelDiameterForBoard(boardPx: number): number {
-  return Math.round(boardPx * WHEEL_GRID_FRAC);
+/**
+ * Must match ReactionWheel: drawn radius = (diameter - BTN) / 2 + 10
+ * → r = diameter/2 - DRAW_R_INSET
+ */
+const WHEEL_BTN = 44;
+const WHEEL_STROKE_PAD = 10;
+const DRAW_R_INSET = WHEEL_BTN / 2 - WHEEL_STROKE_PAD; // 12
+
+/** @deprecated Use WHEEL_CHORD_FRAC — kept so old imports don't break. */
+export const WHEEL_GRID_FRAC = WHEEL_CHORD_FRAC;
+
+/** @deprecated Peek is board-based, not diameter-based. */
+export const WHEEL_VISIBLE_FRAC = WHEEL_PEEK_OF_BOARD / WHEEL_CHORD_FRAC;
+
+/** Height of the visible peek strip under the board (independent of diameter). */
+export function wheelPeekHeightForBoard(boardPx: number): number {
+  return Math.round(boardPx * WHEEL_PEEK_OF_BOARD);
 }
 
+/**
+ * Full circle diameter so the clipped bottom arc spans `WHEEL_CHORD_FRAC`
+ * of the grid at the top of the peek strip.
+ *
+ * halfChord² = (H − inset)(D − H − inset)
+ * ⇒ D = halfChord² / (H − inset) + H + inset
+ */
+export function wheelDiameterForBoard(boardPx: number): number {
+  const H = wheelPeekHeightForBoard(boardPx);
+  const halfChord = (boardPx * WHEEL_CHORD_FRAC) / 2;
+  const denom = Math.max(1, H - DRAW_R_INSET);
+  const D = (halfChord * halfChord) / denom + H + DRAW_R_INSET;
+  // Diameter is larger than the board (shallow peek of a big circle); that's intended.
+  return Math.max(boardPx, Math.round(D));
+}
+
+/** @deprecated Prefer wheelPeekHeightForBoard(boardPx). */
+export function wheelPeekHeight(boardPx: number): number {
+  return wheelPeekHeightForBoard(boardPx);
+}
+
+/** @deprecated Use wheelPeekHeightForBoard. */
 export function wheelPeekWidth(diameter: number): number {
-  return Math.round(diameter * WHEEL_VISIBLE_FRAC);
+  return wheelPeekHeight(diameter);
 }
 
 /** Board size for the centered column — wheel must not affect this. */

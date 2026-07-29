@@ -91,7 +91,7 @@ export function XoxIndicator({
         <g filter="url(#tube-rough)">
           <path
             d={TUBE_PATH}
-            fill="var(--paper)"
+            fill="rgba(255,255,255,0.3)"
             stroke="var(--ink-brown)"
             strokeWidth={2.8}
             strokeLinejoin="round"
@@ -264,7 +264,7 @@ function MatchTab({ match, target }: { match: MatchScore; target: number }) {
               className="flex h-4 w-4 items-center justify-center rounded-full"
               style={{
                 background: bg,
-                border: "1.5px solid var(--paper)",
+                border: "1.5px solid rgba(255,255,255,0.3)",
                 boxShadow: winner ? "0 1px 2px rgba(0,0,0,0.15)" : "none",
               }}
             />

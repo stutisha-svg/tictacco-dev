@@ -94,39 +94,28 @@ function RocketGlyph({ size, color }: { size: number; color: string }) {
 }
 
 function ThoughtCloud({ reaction, color }: { reaction: Reaction; color: string }) {
+  // Figma Paper 01 / cloud paper (2036:538) — scaled down; sticker on the main body.
+  // Asset aspect ~343×228; trail bubbles sit bottom-right so emoji sits upper-center.
+  const W = 72;
+  const H = Math.round((W * 228) / 343);
   return (
     <div
-      className="pointer-events-none absolute -top-3 left-1/2 z-30"
-      style={{ transform: "translate(-50%, -100%)" }}
+      className="pointer-events-none absolute -top-1.5 left-1/2 z-[60]"
+      style={{ transform: "translate(-50%, -100%)", width: W, height: H }}
       aria-label={reaction.label}
     >
+      <img
+        src="/reactions/cloud-paper.png"
+        alt=""
+        draggable={false}
+        aria-hidden
+        className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+      />
       <div
-        className="relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl border-2 bg-white px-3 py-1"
-        style={{
-          borderColor: "var(--ink-brown)",
-          boxShadow: "0 3px 8px rgba(0,0,0,0.12)",
-        }}
+        className="relative flex w-full items-center justify-center"
+        style={{ height: "62%", paddingTop: "4%" }}
       >
-        <ReactionSticker reaction={reaction} size={26} color={color} />
-        {/* tail bubbles */}
-        <span
-          className="absolute h-2 w-2 rounded-full bg-white"
-          style={{
-            left: "50%",
-            bottom: -6,
-            transform: "translateX(-50%)",
-            border: "2px solid var(--ink-brown)",
-          }}
-        />
-        <span
-          className="absolute h-1.5 w-1.5 rounded-full bg-white"
-          style={{
-            left: "50%",
-            bottom: -12,
-            transform: "translate(-140%, 0)",
-            border: "1.5px solid var(--ink-brown)",
-          }}
-        />
+        <ReactionSticker reaction={reaction} size={24} color={color} />
       </div>
     </div>
   );
@@ -148,7 +137,7 @@ function Avatar({ name, glyph, owner, active, crowned, score, reaction, reaction
           {reaction && (
             <motion.div
               key={`${reaction.id}-${reactionKey}`}
-              className="absolute inset-0 z-30"
+              className="absolute inset-0 z-[60]"
               style={{ overflow: "visible" }}
               initial={{ opacity: 0, y: 6, scale: 0.85 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -218,7 +207,7 @@ function Avatar({ name, glyph, owner, active, crowned, score, reaction, reaction
               </filter>
             </defs>
             <g filter={`url(#av-${owner})`}>
-              <circle cx={size / 2} cy={size / 2} r={size / 2 - 5} fill="var(--paper)" />
+              <circle cx={size / 2} cy={size / 2} r={size / 2 - 5} fill="rgba(255,255,255,0.3)" />
               <circle
                 cx={size / 2}
                 cy={size / 2}
