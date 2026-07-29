@@ -139,8 +139,18 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      {/* Desktop: centered preview. Phone frame locks layout to 390px. */}
+      <div className="flex min-h-screen w-full items-center justify-center bg-slate-900 p-0 sm:p-4">
+        <div
+          data-mobile-frame
+          className="relative flex w-full max-w-[390px] min-h-[844px] flex-col overflow-x-hidden rounded-none border-0 border-slate-800 bg-background text-foreground shadow-2xl sm:rounded-[32px] sm:border-[8px]"
+          /* Contain position:fixed chrome (e.g. reaction wheel) inside the frame. */
+          style={{ transform: "translateZ(0)" }}
+        >
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+        </div>
+      </div>
     </QueryClientProvider>
   );
 }

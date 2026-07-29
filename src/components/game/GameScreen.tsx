@@ -52,7 +52,12 @@ export function GameScreen() {
   useEffect(() => {
     const compute = () => {
       // Centered column sizing only — wheel must not change this.
-      setBoardPx(boardSizeForViewport(window.innerWidth, window.innerHeight - 420));
+      setBoardPx(
+        boardSizeForViewport(
+          Math.min(window.innerWidth, 390),
+          window.innerHeight - 420,
+        ),
+      );
     };
     compute();
     window.addEventListener("resize", compute);
@@ -63,8 +68,12 @@ export function GameScreen() {
     const place = () => {
       const el = boardWrapRef.current;
       if (!el) return;
+      const frame = el.closest("[data-mobile-frame]") as HTMLElement | null;
       const br = el.getBoundingClientRect();
-      setWheelTop(br.top + br.height / 2 - wheelDiameter / 2);
+      const fr = frame?.getBoundingClientRect();
+      // fixed is contained by the phone frame — offset relative to the frame, not the viewport.
+      const topInFrame = fr ? br.top - fr.top : br.top;
+      setWheelTop(topInFrame + br.height / 2 - wheelDiameter / 2);
     };
     place();
     window.addEventListener("resize", place);
@@ -167,10 +176,10 @@ export function GameScreen() {
   return (
     <div
       data-game-shell
-      className="relative mx-auto flex min-h-screen w-full max-w-[460px] flex-col items-center overflow-x-hidden py-4"
+      className="relative mx-auto flex min-h-full w-full min-w-0 max-w-full flex-col items-center overflow-x-hidden py-4"
     >
       <motion.div
-        className="relative z-30 flex w-full flex-col items-center gap-3 overflow-visible pt-8"
+        className="relative z-30 flex w-full min-w-0 flex-col items-center gap-3 overflow-x-hidden pt-8"
         animate={
           shouldShake
             ? { x: [0, -8, 8, -6, 6, -3, 3, 0], y: [0, 4, -4, 3, -3, 0, 0, 0] }
@@ -180,22 +189,27 @@ export function GameScreen() {
         }
         transition={{ duration: shouldCelebrate ? 0.9 : 0.6 }}
       >
-        <ColoredIsland>
-          <PlayerCards
-            progressYou={state.progressYou}
-            progressOpp={state.progressOpp}
-            leader={leader}
-            crownedWinner={crownedWinner}
-            match={state.match}
-            matchTarget={state.matchTarget}
-            youReaction={youReaction}
-            youReactionKey={youReactionKey}
-            oppReaction={oppReaction}
-          />
-        </ColoredIsland>
+        <div className="flex w-full min-w-0 flex-col items-center">
+          <ColoredIsland>
+            <PlayerCards
+              progressYou={state.progressYou}
+              progressOpp={state.progressOpp}
+              leader={leader}
+              crownedWinner={crownedWinner}
+              match={state.match}
+              matchTarget={state.matchTarget}
+              youReaction={youReaction}
+              youReactionKey={youReactionKey}
+              oppReaction={oppReaction}
+            />
+          </ColoredIsland>
+        </div>
 
-        <div ref={boardWrapRef} className="relative mt-2 flex w-full items-start justify-center">
-          <div className="relative">
+        <div
+          ref={boardWrapRef}
+          className="relative mt-2 flex w-full min-w-0 items-start justify-center overflow-x-hidden"
+        >
+          <div className="relative max-w-full shrink-0">
             {achievements.length > 0 && (
               <div
                 className="absolute top-0 z-30"
@@ -214,7 +228,7 @@ export function GameScreen() {
           </div>
         </div>
 
-        <div className="mt-3 flex w-full flex-col items-center gap-3">
+        <div className="mt-3 flex w-full min-w-0 flex-col items-center gap-3">
           {badgeKind && badgeMinimized ? (
             <MinimizedResultCard kind={badgeKind} onReset={reset} matchOver={state.matchOver} />
           ) : (
@@ -223,7 +237,7 @@ export function GameScreen() {
         </div>
       </motion.div>
 
-      {/* Flush to viewport right; diameter 75% of grid, ~22% peek (not gap-clamped). */}
+      {/* Flush to frame right; diameter 75% of grid, ~22% peek (not gap-clamped). */}
       <div
         className="pointer-events-none fixed right-0 z-40"
         style={{ top: wheelTop, width: peekW }}
@@ -259,15 +273,15 @@ export function GameScreen() {
         {state.tieRound && (
           <motion.div
             key="tie-overlay"
-            className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center overflow-hidden"
+            className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
           >
             <div className="absolute inset-0 bg-black/40" />
-            <div className="relative z-10 flex w-full max-w-[460px] flex-col items-center gap-6 px-6">
-              <div className="relative h-[200px] w-full">
+            <div className="relative z-10 flex w-full min-w-0 flex-col items-center gap-6 px-4">
+              <div className="relative aspect-[2/1] w-full max-h-[200px]">
                 <WinBadge kind="tie" />
               </div>
             </div>
@@ -280,15 +294,15 @@ export function GameScreen() {
         {badgeKind && !badgeMinimized && (
           <motion.div
             key="overlay"
-            className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden"
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
           >
             <div className="absolute inset-0 bg-black/55 backdrop-blur-[1px]" />
-            <div className="relative z-10 flex w-full max-w-[460px] flex-col items-center gap-6 px-6">
-              <div className="relative h-[200px] w-full">
+            <div className="relative z-10 flex w-full min-w-0 flex-col items-center gap-6 px-4">
+              <div className="relative aspect-[2/1] w-full max-h-[200px]">
                 <WinBadge kind={badgeKind} />
               </div>
             </div>
@@ -314,7 +328,7 @@ function ColoredIsland({
 }) {
   return (
     <div
-      className="relative"
+      className="relative w-full max-w-full min-w-0"
       style={{
         zIndex: 40,
         padding: padded ? 6 : 0,
@@ -350,14 +364,16 @@ function BottomBar({ state, roundMs }: BottomBarProps) {
   }, [revealing, collision, tie, idleWarn, state.myTentative]);
 
   return (
-    <div className="flex w-full flex-col items-center gap-3">
+    <div className="flex w-full min-w-0 flex-col items-center gap-3">
       <StatusCard text={status.text} tone={status.tone} />
-      <RoundTimer
-        running={state.phase === "placing" && state.roundStarted}
-        duration={roundMs}
-        keyId={state.round}
-        idleWarning={idleWarn}
-      />
+      <div className="flex w-full min-w-0 justify-center">
+        <RoundTimer
+          running={state.phase === "placing" && state.roundStarted}
+          duration={roundMs}
+          keyId={state.round}
+          idleWarning={idleWarn}
+        />
+      </div>
     </div>
   );
 }
@@ -371,13 +387,13 @@ function StatusCard({ text, tone }: { text: string; tone: "info" | "warn" | "ale
   const textColor = inverted ? "var(--paper)" : "var(--ink)";
 
   return (
-    <div className="relative w-full max-w-[380px]">
+    <div className="relative w-full min-w-0 min-h-[44px]">
       <svg
         width="100%"
         height={44}
         viewBox="0 0 380 44"
         preserveAspectRatio="none"
-        className="overflow-visible"
+        className="block h-[44px] w-full overflow-visible"
       >
         <defs>
           <filter id="status-rough" x="-5%" y="-30%" width="110%" height="160%">
@@ -413,11 +429,11 @@ function StatusCard({ text, tone }: { text: string; tone: "info" | "warn" | "ale
           <circle cx={16} cy={22} r={4} fill={accent} />
         </g>
       </svg>
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-8">
+      <div className="pointer-events-none absolute inset-0 flex min-h-[44px] items-center justify-center px-4">
         <AnimatePresence mode="wait">
           <motion.span
             key={text}
-            className="text-sm whitespace-nowrap text-center"
+            className="max-w-full truncate text-center text-sm"
             style={{ color: textColor, fontFamily: "var(--font-display)" }}
             initial={{ y: 6, opacity: 0 }}
             animate={
@@ -452,7 +468,7 @@ function MinimizedResultCard({
   return (
     <motion.div
       key="mini-card"
-      className="flex w-full max-w-[360px] flex-col items-center"
+      className="flex w-full min-w-0 flex-col items-center gap-3"
       initial={{ y: 30, opacity: 0, scale: 0.9 }}
       animate={{ y: 0, opacity: 1, scale: 1 }}
       exit={{ y: 30, opacity: 0 }}
@@ -460,7 +476,7 @@ function MinimizedResultCard({
       style={{ filter: "none", zIndex: 50, position: "relative" }}
     >
       <div
-        className="relative flex w-full items-center justify-between gap-3 rounded-2xl border-2 px-4 py-3"
+        className="relative flex w-full min-h-[44px] min-w-0 items-center justify-between gap-3 rounded-2xl border-2 px-4 py-3"
         style={{
           borderColor: "var(--ink)",
           background: "var(--paper)",
@@ -468,10 +484,12 @@ function MinimizedResultCard({
           filter: "none",
         }}
       >
-        <MiniBadge kind={kind} />
+        <div className="flex min-h-[44px] min-w-0 flex-1 items-center">
+          <MiniBadge kind={kind} />
+        </div>
         <button
           onClick={onReset}
-          className="min-h-[44px] min-w-[44px] rounded-full border-2 px-4 py-2 text-sm transition-all duration-200 ease-in-out hover:scale-[1.04] active:scale-[0.96]"
+          className="min-h-[44px] min-w-[44px] shrink-0 rounded-full border-2 px-4 py-2 text-sm transition-all duration-200 ease-in-out hover:scale-[1.04] active:scale-[0.96]"
           style={{
             fontFamily: "var(--font-display)",
             fontStyle: "normal",

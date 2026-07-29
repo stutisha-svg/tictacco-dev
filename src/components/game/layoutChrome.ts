@@ -8,7 +8,8 @@ import { SIZE } from "@/game/rules";
 
 export const MIN_CELL_PX = 44;
 export const MIN_BOARD_PX = SIZE * MIN_CELL_PX; // 352
-export const MAX_BOARD_PX = 460;
+/** Cap to the locked 390px mobile shell so the board never overflows the frame. */
+export const MAX_BOARD_PX = 390;
 
 /** Visible fraction of circle width from the right edge (~20–25%). Do not raise. */
 export const WHEEL_VISIBLE_FRAC = 0.22;
@@ -29,10 +30,8 @@ export function wheelPeekWidth(diameter: number): number {
 
 /** Board size for the centered column — wheel must not affect this. */
 export function boardSizeForViewport(viewportW: number, heightBudget: number): number {
-  const capped = Math.min(
-    MAX_BOARD_PX,
-    Math.floor(viewportW),
-    Math.floor(heightBudget),
-  );
+  // Prefer the phone-frame width (390) over the full desktop window.
+  const frameW = Math.min(MAX_BOARD_PX, Math.floor(viewportW));
+  const capped = Math.min(MAX_BOARD_PX, frameW, Math.floor(heightBudget));
   return Math.max(MIN_BOARD_PX, capped);
 }
