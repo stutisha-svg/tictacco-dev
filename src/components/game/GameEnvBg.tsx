@@ -3,7 +3,14 @@
  * Checkered paper fills the full frame; clipped to the phone’s rounded corners.
  * Scribble sits in-viewport (upper-left), rotated like the design.
  */
-export function GameEnvBg({ className }: { className?: string }) {
+export function GameEnvBg({
+  className,
+  showScribble = true,
+}: {
+  className?: string;
+  /** Game uses the upper-left scribble; homescreen keeps its own doodles instead. */
+  showScribble?: boolean;
+}) {
   return (
     <div
       data-game-env-bg
@@ -27,22 +34,23 @@ export function GameEnvBg({ className }: { className?: string }) {
           objectFit: "cover",
         }}
       />
-      {/* SVG fill-opacity is the visibility control; keep CSS opacity at 1. */}
-      <img
-        src="/game-env/scribble.svg"
-        alt=""
-        draggable={false}
-        className="absolute"
-        style={{
-          left: "6%",
-          top: "12%",
-          width: "min(58%, 260px)",
-          height: "auto",
-          transform: "rotate(-32.48deg)",
-          transformOrigin: "center center",
-          opacity: 1,
-        }}
-      />
+      {showScribble && (
+        <img
+          src="/game-env/scribble.svg"
+          alt=""
+          draggable={false}
+          className="absolute"
+          style={{
+            left: "6%",
+            top: "12%",
+            width: "min(58%, 260px)",
+            height: "auto",
+            transform: "rotate(-32.48deg)",
+            transformOrigin: "center center",
+            opacity: 1,
+          }}
+        />
+      )}
     </div>
   );
 }

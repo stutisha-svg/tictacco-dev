@@ -1,16 +1,17 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  Outlet,
   Link,
   createRootRouteWithContext,
   useRouter,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { BrowserRouter } from "react-router-dom";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { AppRoutes } from "./AppRoutes";
 
 function NotFoundComponent() {
   return (
@@ -134,6 +135,35 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * BrowserRouter needs `document` — mount only after hydration so TanStack SSR
+ * doesn't crash with "document is not defined".
+ */
+function ClientAppRoutes() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div
+        className="flex min-h-0 w-full flex-1 bg-[var(--paper)]"
+        aria-busy="true"
+        aria-label="Loading"
+      />
+    );
+  }
+
+  return (
+    <BrowserRouter>
+      <div className="relative flex min-h-0 w-full flex-1 flex-col">
+        <AppRoutes />
+      </div>
+    </BrowserRouter>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
@@ -144,11 +174,9 @@ function RootComponent() {
         <div
           data-mobile-frame
           className="relative flex w-full max-w-[390px] min-h-[max(844px,100dvh)] flex-col overflow-hidden rounded-none border-0 border-slate-800 bg-[#F5F5F5] text-foreground shadow-2xl sm:rounded-[32px] sm:border-[8px]"
-          /* Contain fixed chrome inside the frame; overflow-hidden clips paper to rounded corners. */
           style={{ transform: "translateZ(0)" }}
         >
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
+          <ClientAppRoutes />
         </div>
       </div>
     </QueryClientProvider>

@@ -1,16 +1,19 @@
 /**
- * TopBar — Figma "top bar" (node 2187:405), including centered "tic tac CO" logo.
- * Flush to the top of the 390px mobile frame: no outer margin/padding.
- * White under the tear is transparent.
+ * TopBar — Figma node 2187:405 (global chrome).
+ *
+ * Layered stack: Paper 17 kraft strip → iOS status bar → optional center mark → side icons.
+ * Home passes showLogo={false}; game and other screens keep the center mark.
  */
 interface TopBarProps {
   className?: string;
   onMenuClick?: () => void;
   onProfileClick?: () => void;
   onSettingsClick?: () => void;
+  /** When false, omit the centered tic tac CO mark (homescreen). Default true. */
+  showLogo?: boolean;
 }
 
-/** Design size from Figma; scales with width via aspect-ratio. */
+/** Figma frame size — scales with 390px shell width via aspect-ratio. */
 const DESIGN_W = 407;
 const DESIGN_H = 142;
 
@@ -19,25 +22,81 @@ export function TopBar({
   onMenuClick,
   onProfileClick,
   onSettingsClick,
+  showLogo = true,
 }: TopBarProps) {
   return (
     <header
       data-top-bar
-      className={`relative z-20 m-0 w-full max-w-full shrink-0 overflow-hidden bg-transparent p-0 sm:rounded-t-[24px] ${className ?? ""}`}
+      data-show-logo={showLogo ? "true" : "false"}
+      className={`relative isolate z-20 m-0 w-full max-w-full shrink-0 overflow-hidden bg-transparent p-0 sm:rounded-t-[24px] ${className ?? ""}`}
       style={{ aspectRatio: `${DESIGN_W} / ${DESIGN_H}` }}
       aria-label="top bar"
     >
-      <img
-        src="/top-bar/bar.png"
-        alt=""
-        draggable={false}
-        className="pointer-events-none absolute inset-0 block h-full w-full max-w-full bg-transparent object-cover object-top"
-      />
-
-      {/* Nav row — logo is centered in bar.png. Hit targets for side icons only. */}
+      {/* Paper 17 — torn kraft; white below tear stays transparent */}
       <div
-        className="absolute inset-x-[6.4%] z-[2] flex items-center justify-between"
-        style={{ top: "44.37%", bottom: "24.65%" }}
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        aria-hidden
+      >
+        <img
+          src="/top-bar/paper.png"
+          alt=""
+          draggable={false}
+          className="absolute max-w-none"
+          style={{
+            height: "193.66%",
+            width: "156.36%",
+            left: "-22.77%",
+            top: "-59.15%",
+          }}
+        />
+      </div>
+
+      {/* iOS status bar — Figma 2187:387 (402×62 @ x=3, y=0) */}
+      <div
+        className="pointer-events-none absolute top-0 z-[1]"
+        style={{
+          left: `${(3 / DESIGN_W) * 100}%`,
+          width: `${(402 / DESIGN_W) * 100}%`,
+          height: `${(62 / DESIGN_H) * 100}%`,
+        }}
+        aria-hidden
+      >
+        <img
+          src="/top-bar/status-bar.svg"
+          alt=""
+          draggable={false}
+          className="block size-full object-fill"
+          width={402}
+          height={62}
+        />
+      </div>
+
+      {/* Center mark — separate layer so home can omit it cleanly */}
+      {showLogo && (
+        <div
+          className="pointer-events-none absolute left-1/2 top-[62px] z-[1] h-[42px] w-[73px] -translate-x-1/2"
+          aria-hidden
+        >
+          <img
+            src="/top-bar/logo-mark.png"
+            alt=""
+            draggable={false}
+            className="block size-full max-w-none object-cover"
+            width={73}
+            height={42}
+          />
+        </div>
+      )}
+
+      {/* Nav row — Figma inset 44.37% / 24.65% / ~6.4% sides; icons 44×44 */}
+      <div
+        className="absolute z-[2] flex items-center justify-between"
+        style={{
+          top: "44.37%",
+          bottom: "24.65%",
+          left: "6.63%",
+          right: "6.14%",
+        }}
       >
         <IconHit
           label="menu"
@@ -82,7 +141,9 @@ function IconHit({
         alt=""
         draggable={false}
         aria-hidden
-        className="pointer-events-none size-full object-contain opacity-0"
+        className="pointer-events-none block size-full max-w-none object-contain"
+        width={44}
+        height={44}
       />
     </button>
   );

@@ -1,5 +1,8 @@
+/**
+ * TanStack index — shell only. Screen UI is owned by react-router-dom AppRoutes
+ * inside the 390px frame in `__root.tsx`.
+ */
 import { createFileRoute } from "@tanstack/react-router";
-import { GameScreen } from "@/components/game/GameScreen";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -8,13 +11,9 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "A dramatic hand-drawn duel on an 8x8 grid. Place X, O, or clear. First to sketch X-O-X in a line wins.",
+          "A hand-drawn 8x8 grid duel. Tap to place X, O, or clear. First to sketch X-O-X wins.",
       },
     ],
   }),
-  component: Index,
+  component: () => null,
 });
-
-function Index() {
-  return <GameScreen />;
-}
