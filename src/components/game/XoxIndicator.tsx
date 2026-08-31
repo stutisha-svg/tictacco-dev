@@ -17,6 +17,8 @@ interface Props {
   leader: Owner | null;
   match: MatchScore;
   matchTarget: number;
+  /** When set, replaces the "best of N" tab (e.g. tutorial screen). */
+  tabLabel?: string;
   /** Winning player — tube fills solid with their colour; glyphs go white. */
   winner?: Owner | null;
   /** After the big result badge shrinks — keep pulsing the full fill. */
@@ -49,6 +51,7 @@ export function XoxIndicator({
   leader,
   match,
   matchTarget,
+  tabLabel,
   winner = null,
   celebrate = false,
 }: Props) {
@@ -63,7 +66,7 @@ export function XoxIndicator({
 
   return (
     <div className="flex flex-col items-center">
-      <MatchTab match={match} target={matchTarget} />
+      <MatchTab match={match} target={matchTarget} label={tabLabel} />
       <svg
         width={TUBE_W}
         height={TUBE_H}
@@ -265,10 +268,19 @@ export function XoxIndicator({
   );
 }
 
-function MatchTab({ match, target }: { match: MatchScore; target: number }) {
+function MatchTab({
+  match,
+  target,
+  label,
+}: {
+  match: MatchScore;
+  target: number;
+  label?: string;
+}) {
   const slots: (Owner | null)[] = Array.from({ length: target }).map(
     (_, i) => match.history[i] ?? null,
   );
+  const tabText = label ?? `best of ${target}`;
   return (
     <div className="relative" style={{ fontFamily: "var(--font-display)" }}>
       <svg width={196} height={30} viewBox="0 0 196 30" className="overflow-visible">
@@ -286,37 +298,40 @@ function MatchTab({ match, target }: { match: MatchScore; target: number }) {
           />
         </g>
         <text
-          x={16}
+          x={label ? 98 : 16}
           y={20}
+          textAnchor={label ? "middle" : "start"}
           fontFamily="var(--font-display)"
           fontSize={14}
           fill="var(--paper)"
           fontWeight={700}
         >
-          best of {target}
+          {tabText}
         </text>
       </svg>
-      <div className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
-        {slots.map((winner, i) => {
-          const bg =
-            winner === "you"
-              ? "var(--player-you)"
-              : winner === "opp"
-                ? "var(--player-opp)"
-                : "transparent";
-          return (
-            <span
-              key={i}
-              className="flex h-4 w-4 items-center justify-center rounded-full"
-              style={{
-                background: bg,
-                border: "1.5px solid rgba(255,255,255,0.3)",
-                boxShadow: winner ? "0 1px 2px rgba(0,0,0,0.15)" : "none",
-              }}
-            />
-          );
-        })}
-      </div>
+      {!label && (
+        <div className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
+          {slots.map((winner, i) => {
+            const bg =
+              winner === "you"
+                ? "var(--player-you)"
+                : winner === "opp"
+                  ? "var(--player-opp)"
+                  : "transparent";
+            return (
+              <span
+                key={i}
+                className="flex h-4 w-4 items-center justify-center rounded-full"
+                style={{
+                  background: bg,
+                  border: "1.5px solid rgba(255,255,255,0.3)",
+                  boxShadow: winner ? "0 1px 2px rgba(0,0,0,0.15)" : "none",
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

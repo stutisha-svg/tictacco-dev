@@ -11,12 +11,15 @@ interface Props {
   state: GameState;
   onTap: (tile: number) => void;
   boardPx: number;
+  /** When false, never show the idle waiting skeleton (tutorial preset screens). */
+  showWaitingOverlay?: boolean;
 }
 
-export function Board({ state, onTap, boardPx }: Props) {
+export function Board({ state, onTap, boardPx, showWaitingOverlay = true }: Props) {
   const cell = boardPx / SIZE;
   const revealing = state.phase === "revealing";
-  const waiting = state.phase === "placing" && state.idleWarning;
+  const waiting =
+    showWaitingOverlay && state.phase === "placing" && state.idleWarning;
 
   // STRAIGHT grid lines — crayon texture comes from the SVG filter, not from
   // wobbled coordinates.

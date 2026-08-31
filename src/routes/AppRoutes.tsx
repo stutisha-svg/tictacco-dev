@@ -4,7 +4,7 @@
  */
 import { Navigate, Route, Routes } from "react-router-dom";
 import { HomeScreen } from "@/features/home/HomeScreen";
-import { TutorialStep } from "@/features/tutorial/TutorialStep";
+import { TutorialScreen } from "@/features/tutorial/TutorialScreen";
 import { ScoringScreen } from "@/features/scoring/ScoringScreen";
 import { AchievementsScreen } from "@/features/achievements/AchievementsScreen";
 import { GameScreen } from "@/components/game/GameScreen";
@@ -13,7 +13,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<HomeScreen />} />
-      <Route path="/tutorial" element={<TutorialStep />} />
+      <Route path="/tutorial" element={<TutorialScreen />} />
       <Route path="/score" element={<ScoringScreen />} />
       <Route path="/achievements" element={<AchievementsScreen />} />
       {/* Existing game UI — unchanged component; Home now owns `/`. */}

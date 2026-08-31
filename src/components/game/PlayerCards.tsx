@@ -22,6 +22,8 @@ interface PlayerCardsProps {
   crownedWinner?: Owner | null;
   match: MatchScore;
   matchTarget: number;
+  /** When set, replaces the "best of N" tab (e.g. tutorial screen). */
+  tabLabel?: string;
   /** Winning owner while phase is won — floods the XOX tube. */
   tubeWinner?: Owner | null;
   /** Pulse the tube fill after the result badge collapses. */
@@ -256,6 +258,7 @@ export function PlayerCards({
   crownedWinner,
   match,
   matchTarget,
+  tabLabel,
   tubeWinner = null,
   tubeCelebrate = false,
   youReaction,
@@ -281,6 +284,7 @@ export function PlayerCards({
           leader={leader}
           match={match}
           matchTarget={matchTarget}
+          tabLabel={tabLabel}
           winner={tubeWinner}
           celebrate={tubeCelebrate}
         />
