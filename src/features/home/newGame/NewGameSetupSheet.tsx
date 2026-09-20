@@ -4,6 +4,7 @@
  */
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { CrayonBackIcon } from "@/components/game/CrayonBackIcon";
 
 /** Sized for game-count + start CTA — used for every step. */
 const SHEET_W = 340;
@@ -74,22 +75,9 @@ export function NewGameSetupSheet({
           type="button"
           aria-label={backLabel}
           onClick={onBack}
-          className="absolute left-5 top-5 z-20 flex h-9 w-9 items-center justify-center rounded-full border-2 transition-transform hover:scale-105 active:scale-95"
-          style={{
-            borderColor: "var(--ink)",
-            background: "rgba(255,255,255,0.75)",
-            color: "var(--ink)",
-          }}
+          className="absolute left-4 top-4 z-20 flex size-11 min-h-[44px] min-w-[44px] items-center justify-center bg-transparent p-0 transition-transform hover:scale-105 active:scale-95"
         >
-          <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden>
-            <path
-              d="M11.5 3.5 L5.5 9 L11.5 14.5"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <CrayonBackIcon size={36} />
         </button>
       )}
 

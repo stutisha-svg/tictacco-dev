@@ -3,7 +3,12 @@
  *
  * Layered stack: Paper 17 kraft strip → iOS status bar → optional center mark → side icons.
  * Home passes showLogo={false}; game and other screens keep the center mark.
+ * Settings gear rotates briefly and opens SettingsMenu (owned here so screens stay untouched).
  */
+import { useState } from "react";
+import { motion } from "motion/react";
+import { SettingsMenu, useSettings } from "@/features/settings";
+
 interface TopBarProps {
   className?: string;
   onMenuClick?: () => void;
@@ -24,99 +29,126 @@ export function TopBar({
   onSettingsClick,
   showLogo = true,
 }: TopBarProps) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [gearSpin, setGearSpin] = useState(0);
+  const {
+    settings,
+    setSfxVolume,
+    setGameVolume,
+    setContrast,
+    setLanguage,
+  } = useSettings();
+
+  const openSettings = () => {
+    setGearSpin((n) => n + 1);
+    setSettingsOpen(true);
+    onSettingsClick?.();
+  };
+
   return (
-    <header
-      data-top-bar
-      data-show-logo={showLogo ? "true" : "false"}
-      className={`relative isolate z-20 m-0 w-full max-w-full shrink-0 overflow-hidden bg-transparent p-0 sm:rounded-t-[24px] ${className ?? ""}`}
-      style={{ aspectRatio: `${DESIGN_W} / ${DESIGN_H}` }}
-      aria-label="top bar"
-    >
-      {/* Paper 17 — torn kraft; white below tear stays transparent */}
-      <div
-        className="pointer-events-none absolute inset-0 overflow-hidden"
-        aria-hidden
+    <>
+      <header
+        data-top-bar
+        data-show-logo={showLogo ? "true" : "false"}
+        className={`relative isolate z-20 m-0 w-full max-w-full shrink-0 overflow-hidden bg-transparent p-0 sm:rounded-t-[24px] ${className ?? ""}`}
+        style={{ aspectRatio: `${DESIGN_W} / ${DESIGN_H}` }}
+        aria-label="top bar"
       >
-        <img
-          src="/top-bar/paper.png"
-          alt=""
-          draggable={false}
-          className="absolute max-w-none"
-          style={{
-            height: "193.66%",
-            width: "156.36%",
-            left: "-22.77%",
-            top: "-59.15%",
-          }}
-        />
-      </div>
-
-      {/* iOS status bar — Figma 2187:387 (402×62 @ x=3, y=0) */}
-      <div
-        className="pointer-events-none absolute top-0 z-[1]"
-        style={{
-          left: `${(3 / DESIGN_W) * 100}%`,
-          width: `${(402 / DESIGN_W) * 100}%`,
-          height: `${(62 / DESIGN_H) * 100}%`,
-        }}
-        aria-hidden
-      >
-        <img
-          src="/top-bar/status-bar.svg"
-          alt=""
-          draggable={false}
-          className="block size-full object-fill"
-          width={402}
-          height={62}
-        />
-      </div>
-
-      {/* Center mark — separate layer so home can omit it cleanly */}
-      {showLogo && (
+        {/* Paper 17 — torn kraft; white below tear stays transparent */}
         <div
-          className="pointer-events-none absolute left-1/2 top-[62px] z-[1] h-[42px] w-[73px] -translate-x-1/2"
+          className="pointer-events-none absolute inset-0 overflow-hidden"
           aria-hidden
         >
           <img
-            src="/top-bar/logo-mark.png"
+            src="/top-bar/paper.png"
             alt=""
             draggable={false}
-            className="block size-full max-w-none object-cover"
-            width={73}
-            height={42}
+            className="absolute max-w-none"
+            style={{
+              height: "193.66%",
+              width: "156.36%",
+              left: "-22.77%",
+              top: "-59.15%",
+            }}
           />
         </div>
-      )}
 
-      {/* Nav row — Figma inset 44.37% / 24.65% / ~6.4% sides; icons 44×44 */}
-      <div
-        className="absolute z-[2] flex items-center justify-between"
-        style={{
-          top: "44.37%",
-          bottom: "24.65%",
-          left: "6.63%",
-          right: "6.14%",
-        }}
-      >
-        <IconHit
-          label="menu"
-          iconSrc="/top-bar/icon-menu.svg"
-          onClick={onMenuClick}
-        />
-        <div className="flex items-center gap-2.5">
-          <IconHit
-            label="profile"
-            iconSrc="/top-bar/icon-user.svg"
-            onClick={onProfileClick}
-          />
-          <IconHit
-            label="settings"
-            iconSrc="/top-bar/icon-settings.svg"
-            onClick={onSettingsClick}
+        {/* iOS status bar — Figma 2187:387 (402×62 @ x=3, y=0) */}
+        <div
+          className="pointer-events-none absolute top-0 z-[1]"
+          style={{
+            left: `${(3 / DESIGN_W) * 100}%`,
+            width: `${(402 / DESIGN_W) * 100}%`,
+            height: `${(62 / DESIGN_H) * 100}%`,
+          }}
+          aria-hidden
+        >
+          <img
+            src="/top-bar/status-bar.svg"
+            alt=""
+            draggable={false}
+            className="block size-full object-fill"
+            width={402}
+            height={62}
           />
         </div>
-      </div>
-    </header>
+
+        {/* Center mark — separate layer so home can omit it cleanly */}
+        {showLogo && (
+          <div
+            className="pointer-events-none absolute left-1/2 top-[62px] z-[1] h-[42px] w-[73px] -translate-x-1/2"
+            aria-hidden
+          >
+            <img
+              src="/top-bar/logo-mark.png"
+              alt=""
+              draggable={false}
+              className="block size-full max-w-none object-cover"
+              width={73}
+              height={42}
+            />
+          </div>
+        )}
+
+        {/* Nav row — Figma inset 44.37% / 24.65% / ~6.4% sides; icons 44×44 */}
+        <div
+          className="absolute z-[2] flex items-center justify-between"
+          style={{
+            top: "44.37%",
+            bottom: "24.65%",
+            left: "6.63%",
+            right: "6.14%",
+          }}
+        >
+          <IconHit
+            label="menu"
+            iconSrc="/top-bar/icon-menu.svg"
+            onClick={onMenuClick}
+          />
+          <div className="flex items-center gap-2.5">
+            <IconHit
+              label="profile"
+              iconSrc="/top-bar/icon-user.svg"
+              onClick={onProfileClick}
+            />
+            <SettingsIconHit
+              spinKey={gearSpin}
+              onClick={openSettings}
+            />
+          </div>
+        </div>
+      </header>
+
+      <SettingsMenu
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        settings={settings}
+        onSfxVolume={setSfxVolume}
+        onGameVolume={setGameVolume}
+        onContrast={setContrast}
+        onLanguage={setLanguage}
+      />
+    </>
   );
 }
 
@@ -144,6 +176,38 @@ function IconHit({
         className="pointer-events-none block size-full max-w-none object-contain"
         width={44}
         height={44}
+      />
+    </button>
+  );
+}
+
+/** Settings gear — brief rotate on each open. */
+function SettingsIconHit({
+  spinKey,
+  onClick,
+}: {
+  spinKey: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label="settings"
+      onClick={onClick}
+      className="relative flex size-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center overflow-hidden rounded-sm bg-transparent p-0"
+    >
+      <motion.img
+        key={spinKey}
+        src="/top-bar/icon-settings.svg"
+        alt=""
+        draggable={false}
+        aria-hidden
+        className="pointer-events-none block size-full max-w-none object-contain"
+        width={44}
+        height={44}
+        initial={{ rotate: 0 }}
+        animate={{ rotate: spinKey === 0 ? 0 : 45 }}
+        transition={{ type: "spring", stiffness: 260, damping: 16 }}
       />
     </button>
   );
