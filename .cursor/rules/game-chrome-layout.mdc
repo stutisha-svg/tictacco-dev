@@ -12,6 +12,7 @@ alwaysApply: true
 - Profiles, grid, and controls are a **single centered column** inside that frame.
 - **Never** set column width to `100vw − peek` or otherwise resize/off-center the stack for the wheel.
 - Board size from `boardSizeForViewport` only — wheel must not feed back into board size. Cap board at **390px**.
+- Product screens (achievements, etc.) must **not** grow the frame height — scroll inside with a hidden scrollbar.
 
 ## Reaction wheel
 

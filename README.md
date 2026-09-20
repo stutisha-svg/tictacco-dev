@@ -29,8 +29,14 @@ Useful URLs while developing:
 
 | URL | Page |
 | --- | --- |
-| `/` | The game |
+| `/` | Home (CTAs: new game, invite, tutorial, achievements) |
+| `/game` | Live match |
+| `/tutorial` | Static rules walkthrough |
+| `/score` | Post-series scoring (after matchOver) |
+| `/achievements` | Badge gallery |
 | `/design-system` | Live token & component reference |
+
+Product screens are wired in `src/routes/AppRoutes.tsx` (react-router-dom inside the 390px shell). TanStack file routes still own `__root.tsx` / `/design-system` — see `src/routes/README.md`.
 
 ---
 
@@ -45,22 +51,41 @@ tictacco/
 │   ├── styles.css            # crayon design tokens, typography utilities
 │   ├── router.tsx / start.ts / server.ts
 │   ├── routeTree.gen.ts      # auto-generated — don't hand-edit
-│   ├── routes/               # file-based routes (see routes/README.md)
-│   │   ├── __root.tsx        # app shell, fonts, meta ("tic tac co")
-│   │   ├── index.tsx         # game at /
+│   ├── routes/               # TanStack shell + AppRoutes (see routes/README.md)
+│   │   ├── __root.tsx        # 390px frame, fonts, meta ("tic tac co")
+│   │   ├── AppRoutes.tsx     # /, /game, /tutorial, /score, /achievements
 │   │   └── design-system.tsx # design reference at /design-system
+│   ├── features/             # product surfaces (namespaced by feature)
+│   │   ├── home/             # HomeScreen, CTAs, newGame setup modal
+│   │   ├── tutorial/         # Tutorial* walkthrough (not GameScreen chrome)
+│   │   ├── scoring/          # Scoring* post-series results
+│   │   ├── settings/         # TopBar settings overlay + prefs
+│   │   └── achievements/     # Achievements* gallery
 │   ├── game/                 # pure game logic (no React UI)
 │   │   ├── rules.ts          # board size, X-O-X win lines, shapes
-│   │   ├── useGameEngine.ts  # turn/timer/match state hook
+│   │   ├── useGameEngine.ts  # turn/timer/match state (optional matchTarget/roundMs)
 │   │   └── bot.ts            # rival placement helper
 │   ├── components/
-│   │   ├── game/             # all game chrome & visuals (see below)
+│   │   ├── game/             # live match chrome & visuals (see below)
 │   │   └── ui/               # generic shadcn-style primitives (mostly unused by game)
 │   ├── hooks/
 │   └── lib/                  # utils, Lovable error reporting
-├── public/                   # static assets (e.g. fonts)
+├── public/                   # static assets (homescreen, top-bar, game-env, fonts)
 └── .cursor/rules/            # Cursor agent layout rules for game chrome
 ```
+
+### Product features (`src/features/`)
+
+| Feature | Route / entry | Notes |
+| --- | --- | --- |
+| `home/` | `/` | Kraft CTAs; **New Game** opens setup modal (does not deep-link straight to `/game`) |
+| `home/newGame/` | modal on home | Mode (relaxed / timed / ???) → game count slider 3–7 → `/game` with router state |
+| `tutorial/` | `/tutorial` | `Tutorial*`-prefixed static walkthrough; tap-only reaction strip |
+| `scoring/` | `/score` | After matchOver (~3s); groop XP, rematch / quit |
+| `settings/` | TopBar gear | Paper overlay: SFX/game volume, contrast, language, tutorial, quit; prefs in localStorage |
+| `achievements/` | `/achievements` | Static gallery; frame-height + invisible scroll; FAB **back home**; tap → `AchievementModal` |
+
+Keep feature prefixes (`NewGame*`, `Tutorial*`, `Scoring*`, `Achievements*`, `Settings*`) so ownership is obvious at a glance. Do not fold tutorial/scoring chrome into `GameScreen` except thin handoff hooks.
 
 ### Game UI (`src/components/game/`)
 
@@ -70,11 +95,13 @@ tictacco/
 | `Board.tsx` / `Shape.tsx` | 8×8 grid + crayon X/O marks |
 | `PlayerCards.tsx` / `XoxIndicator.tsx` | Avatars, match score, X-O-X progress |
 | `RoundTimer.tsx` | Idle “rival is waiting” outline trace; fill when the round runs |
-| `ReactionWheel.tsx` | Sticker wheel docked to the **viewport right** (drag + inertia) |
+| `ReactionWheel.tsx` | Sticker wheel docked to the **bottom of the phone** (drag + inertia) |
 | `reactions.ts` / `ReactionSticker.tsx` | Reaction catalog + renderer (kaomoji interim; `assetSrc` ready) |
 | `layoutChrome.ts` / `LAYOUT.md` | Board/wheel sizing constants and layout notes |
-| `MICRO_INTERACTIONS.md` | Game scenarios, UI states, and chrome micro-interactions |
-| `AchievementRail.tsx` | Reward badges **left of the grid** |
+| `MICRO_INTERACTIONS.md` | Game scenarios, UI states, chrome + feature micro-interactions |
+| `TopBar.tsx` | Global kraft strip; settings gear rotates and opens `SettingsMenu` |
+| `CrayonCloseIcon.tsx` / `CrayonBackIcon.tsx` | Crayon-grain circle controls (settings close / back / FAB) |
+| `achievements.ts` / `AchievementNudge.tsx` / `AchievementModal.tsx` | In-match badge catalog, nudge, detail sheet |
 | `WinBadge.tsx` / `Confetti.tsx` | Win/lose/tie/collision chrome + continuous confetti |
 | `BoardWaitingOverlay.tsx` | Idle skeleton + tap cue (synced with status/timer) |
 | `InkPourOverlay.tsx` / `DeadScribble.tsx` / … | Loss / dead-cell flourishes |
@@ -90,9 +117,10 @@ tictacco/
 ### Visual language
 
 - Paper cream background, ink outlines, hand-drawn / crayon feel
-- Display font stack: **Crayon Libre** → Caveat → Patrick Hand
+- Display font stack: **Crayon Libre** → Caveat → Patrick Hand (`var(--font-display)` for headings / UI labels — avoid one-off decorative stacks on feature chrome)
 - Player you = orange (`--player-you`); rival = cyan (`--player-opp`)
 - Achievements / accents use purple (`--accent-purple`)
+- Modals / sheets fill with **`var(--paper)`** (cream), sketch wobble outlines, dashed purple inner stroke — same language for New Game, Settings, Achievement detail, scoring cards
 
 ### Core CSS variables (in `:root`)
 
@@ -107,16 +135,15 @@ tictacco/
 
 Typography utilities live in `styles.css` (`text-display`, `text-body-md`, `text-micro`, …). Prefer these over one-off font sizes in game chrome.
 
-### Layout rules (game chrome — still in flux)
+### Layout rules (game chrome)
 
 Documented in `src/components/game/LAYOUT.md` and `.cursor/rules/game-chrome-layout.mdc`:
 
-- **Centered column:** profiles → board → timer (`max-w-[460px]`, centered). Side chrome must not resize/off-center that stack.
-- **Reaction wheel:** `position: fixed; right: 0`; diameter ≈ **75%** of grid height; only ~**20–25%** of the circle width peeks on-screen.
-- **Achievements:** left of the grid (not above it in document flow).
-- Cells stay **≥ 44×44px** (board ≥ 352px) when the viewport allows.
-
-**Known open item for the meeting:** wheel size vs. overlap on narrow screens still needs tuning — don’t treat the current peek/diameter as final product polish.
+- **Phone frame:** ~**390px** wide (`__root.tsx`); product screens must **not** grow the frame height — use inner invisible scroll when lists are long (e.g. achievements).
+- **Centered column:** profiles → board → timer, centered inside the frame. Side chrome must not resize/off-center that stack.
+- **Reaction wheel:** flush at the **bottom of the screen** (under status/timer); visible arc ≈ **88%** of grid width; peek height locked — don’t grow peek when widening the arc.
+- **In-match achievement chrome:** nudge under top bar + status banners — not a side rail that resizes the board.
+- Cells stay **≥ 44×44px** (board ≥ 352px) when the viewport allows. Cap board at **390px**.
 
 ---
 
@@ -133,7 +160,10 @@ Cursor ↔ Lovable workflow: commit + push from one tool, pull before editing in
 
 ## Quick product summary
 
-- Match play with a round timer and rival bot placements
-- Reaction stickers via the right-edge wheel
-- Win / lose / tie badges, confetti, ink-pour on loss
+- Home launch screen with kraft CTAs
+- New Game setup: pace + best-of (3–7), then match
+- Match play with round timer (mode-dependent) and rival bot placements
+- Reaction stickers via the bottom-edge wheel
+- Win / lose / tie badges, confetti, ink-pour on loss; series → scoring + groop XP
+- Settings from TopBar; tutorial walkthrough; achievements gallery
 - Branding name: **tic tac co** (X-O-X remains the win mechanic copy)
