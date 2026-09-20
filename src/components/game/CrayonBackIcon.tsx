@@ -3,7 +3,14 @@
  */
 import { useId } from "react";
 
-export function CrayonBackIcon({ size = 36 }: { size?: number }) {
+export function CrayonBackIcon({
+  size = 36,
+  stroke = "#000",
+}: {
+  size?: number;
+  /** Stroke color — use paper on ink-filled buttons. */
+  stroke?: string;
+}) {
   const id = `crayon-back-${useId().replace(/:/g, "")}`;
   return (
     <svg
@@ -13,7 +20,7 @@ export function CrayonBackIcon({ size = 36 }: { size?: number }) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden
-      className="pointer-events-none block"
+      className="pointer-events-none relative block shrink-0"
     >
       <defs>
         <filter
@@ -48,7 +55,7 @@ export function CrayonBackIcon({ size = 36 }: { size?: number }) {
       </defs>
       <g
         filter={`url(#${id})`}
-        stroke="#000"
+        stroke={stroke}
         strokeWidth={2.4}
         strokeLinecap="round"
         strokeLinejoin="round"

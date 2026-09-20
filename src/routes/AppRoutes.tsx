@@ -6,7 +6,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { HomeScreen } from "@/features/home/HomeScreen";
 import { TutorialScreen } from "@/features/tutorial";
 import { ScoringScreen } from "@/features/scoring/ScoringScreen";
-import { AchievementsScreen } from "@/features/achievements/AchievementsScreen";
+import { AchievementsScreen } from "@/features/achievements";
 import { GameScreen } from "@/components/game/GameScreen";
 
 export function AppRoutes() {
