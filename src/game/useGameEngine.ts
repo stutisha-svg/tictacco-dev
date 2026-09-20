@@ -67,14 +67,21 @@ const REVEAL_MS = 1800;
 const TIE_HOLD_MS = 2200;
 /** How long with no grid tap (pre-start) before waiting chrome appears. */
 const IDLE_WARN_MS = 10_000;
-const MATCH_TOTAL = 3; // play all 3 games; most wins takes it
+const MATCH_TOTAL = 3; // default best-of when no NewGameConfig is passed
 
-const initial = (): GameState => ({
+export type GameEngineOptions = {
+  /** Best-of N (clamped by caller). Defaults to MATCH_TOTAL. */
+  matchTarget?: number;
+  /** Round lock duration in ms. Defaults to ROUND_MS. */
+  roundMs?: number;
+};
+
+const initial = (opts?: GameEngineOptions): GameState => ({
   board: emptyBoard(),
   round: 1,
   phase: "placing",
   timerStart: null,
-  duration: ROUND_MS,
+  duration: opts?.roundMs ?? ROUND_MS,
   myTentative: null,
   roundStarted: false,
   idleWarning: false,
@@ -85,7 +92,7 @@ const initial = (): GameState => ({
   progressYou: 0,
   progressOpp: 0,
   match: { you: 0, opp: 0, history: [] },
-  matchTarget: MATCH_TOTAL,
+  matchTarget: opts?.matchTarget ?? MATCH_TOTAL,
   matchOver: false,
 });
 
@@ -227,7 +234,8 @@ function reducer(state: GameState, action: Action): GameState {
         timerStart: null,
         roundStarted: false,
         idleWarning: false,
-        duration: ROUND_MS,
+        // Keep the mode's round length across rounds.
+        duration: state.duration,
         oppMove: null,
         tieRound: null,
         progressYou,
@@ -238,16 +246,24 @@ function reducer(state: GameState, action: Action): GameState {
       // If match is over, wipe match wins too; else keep them and start next game.
       const keepMatch = !state.matchOver;
       return {
-        ...initial(),
+        ...initial({
+          matchTarget: state.matchTarget,
+          roundMs: state.duration,
+        }),
         match: keepMatch ? state.match : { you: 0, opp: 0, history: [] },
         matchTarget: state.matchTarget,
+        duration: state.duration,
       };
     }
   }
 }
 
-export function useGameEngine() {
-  const [state, dispatch] = useReducer(reducer, undefined, initial);
+export function useGameEngine(opts?: GameEngineOptions) {
+  const matchTarget = opts?.matchTarget ?? MATCH_TOTAL;
+  const roundMs = opts?.roundMs ?? ROUND_MS;
+  const [state, dispatch] = useReducer(reducer, undefined, () =>
+    initial({ matchTarget, roundMs }),
+  );
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -283,7 +299,7 @@ export function useGameEngine() {
     }
 
     const elapsed = Date.now() - clock.start - clock.pausedAccum;
-    const remaining = Math.max(0, ROUND_MS - elapsed);
+    const remaining = Math.max(0, state.duration - elapsed);
     const t = setTimeout(() => {
       const s = stateRef.current;
       const opp = selectBotMove(s.board, "opp", {
@@ -293,7 +309,14 @@ export function useGameEngine() {
       dispatch({ type: "lock", oppMove: opp });
     }, remaining);
     return () => clearTimeout(t);
-  }, [state.phase, state.round, state.roundStarted, state.myTentative, state.timerStart]);
+  }, [
+    state.phase,
+    state.round,
+    state.roundStarted,
+    state.myTentative,
+    state.timerStart,
+    state.duration,
+  ]);
 
   useEffect(() => {
     if (state.phase !== "placing") {
@@ -330,5 +353,5 @@ export function useGameEngine() {
   const tap = useCallback((tile: number) => dispatch({ type: "tap", tile }), []);
   const reset = useCallback(() => dispatch({ type: "softReset" }), []);
 
-  return { state, tap, reset, roundMs: ROUND_MS, revealMs: REVEAL_MS };
+  return { state, tap, reset, roundMs: state.duration, revealMs: REVEAL_MS };
 }

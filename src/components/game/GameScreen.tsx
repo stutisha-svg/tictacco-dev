@@ -8,6 +8,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { useLocation } from "react-router-dom";
 import { useGameEngine } from "@/game/useGameEngine";
 import { PlayerCards } from "./PlayerCards";
 import { RoundTimer } from "./RoundTimer";
@@ -39,6 +40,11 @@ import {
   wheelPeekHeightForBoard,
 } from "./layoutChrome";
 import { useScoringMatchOverHandoff } from "@/features/scoring/useScoringMatchOverHandoff";
+import {
+  clampGameCount,
+  isNewGameConfig,
+  roundMsForMode,
+} from "@/features/home/newGame";
 
 const BADGE_HOLD_MS = 1600;
 const REACTION_TTL_MS = 2600;
@@ -46,7 +52,17 @@ const STATUS_CYCLE_MS = 3500;
 const UNLOCK_FLASH_MS = 5500;
 
 export function GameScreen() {
-  const { state, tap, reset, roundMs } = useGameEngine();
+  const location = useLocation();
+  const engineOpts = useMemo(() => {
+    const raw = location.state;
+    if (!isNewGameConfig(raw)) return undefined;
+    return {
+      matchTarget: clampGameCount(raw.gameCount),
+      roundMs: roundMsForMode(raw.mode),
+    };
+  }, [location.state]);
+
+  const { state, tap, reset, roundMs } = useGameEngine(engineOpts);
   const [boardPx, setBoardPx] = useState(MIN_BOARD_PX);
   const [badgeMinimized, setBadgeMinimized] = useState(false);
   const [youReaction, setYouReaction] = useState<Reaction | null>(null);

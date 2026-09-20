@@ -1,5 +1,5 @@
 import { Link, type LinkProps } from "react-router-dom";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 
 import { CTA_INTERACTION } from "./constants";
 
@@ -18,6 +18,8 @@ type HomeCtaShellProps = {
   align?: "block" | "flex-center";
   /** When omitted, renders a `<button>` instead of `<Link>`. */
   to?: LinkProps["to"];
+  /** Optional click handler (e.g. intercept Link navigation). */
+  onClick?: (e: MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => void;
   children: ReactNode;
 };
 
@@ -35,6 +37,7 @@ export function HomeCtaShell({
   maxWidthClass,
   align = "block",
   to,
+  onClick,
   children,
 }: HomeCtaShellProps) {
   const className = [
@@ -54,6 +57,7 @@ export function HomeCtaShell({
         data-cta={id}
         className={className}
         style={style}
+        onClick={onClick}
       >
         {children}
       </Link>
@@ -67,6 +71,7 @@ export function HomeCtaShell({
       data-cta={id}
       className={className}
       style={style}
+      onClick={onClick}
     >
       {children}
     </button>
