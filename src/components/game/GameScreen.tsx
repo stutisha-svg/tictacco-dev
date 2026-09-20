@@ -38,6 +38,7 @@ import {
   wheelDiameterForBoard,
   wheelPeekHeightForBoard,
 } from "./layoutChrome";
+import { useScoringMatchOverHandoff } from "@/features/scoring/useScoringMatchOverHandoff";
 
 const BADGE_HOLD_MS = 1600;
 const REACTION_TTL_MS = 2600;
@@ -95,14 +96,27 @@ export function GameScreen() {
   const isLoss = badgeKind === "lose";
   const isWin = badgeKind === "win";
 
+  // Scoring feature owns series-end timing + /score navigation.
+  const { keepFullBadge } = useScoringMatchOverHandoff({
+    matchOver: state.matchOver,
+    badgeKind,
+    youWins: state.match.you,
+    oppWins: state.match.opp,
+    matchTarget: state.matchTarget,
+  });
+
   useEffect(() => {
     if (!badgeKind) {
       setBadgeMinimized(false);
       return;
     }
+    if (keepFullBadge) {
+      setBadgeMinimized(false);
+      return;
+    }
     const t = setTimeout(() => setBadgeMinimized(true), BADGE_HOLD_MS);
     return () => clearTimeout(t);
-  }, [badgeKind]);
+  }, [badgeKind, keepFullBadge]);
 
   const crownedWinner =
     badgeMinimized && badgeKind === "win" ? state.winner?.owner ?? null : null;
@@ -270,8 +284,8 @@ export function GameScreen() {
         {/* Status + timer, then wheel flush to the bottom edge of the screen. */}
         <div className="mt-auto flex w-full min-w-0 flex-col items-center">
           <div className="relative z-50 mb-2 flex w-full min-w-0 flex-col items-center gap-3 px-0">
-            {badgeKind && badgeMinimized ? (
-              <MinimizedResultCard kind={badgeKind} onReset={reset} matchOver={state.matchOver} />
+            {badgeKind && badgeMinimized && !keepFullBadge ? (
+              <MinimizedResultCard kind={badgeKind} onReset={reset} />
             ) : (
               <BottomBar
                 state={state}
@@ -623,11 +637,9 @@ function StatusCard({
 function MinimizedResultCard({
   kind,
   onReset,
-  matchOver,
 }: {
   kind: BadgeKind;
   onReset: () => void;
-  matchOver: boolean;
 }) {
   return (
     <motion.div
@@ -652,6 +664,7 @@ function MinimizedResultCard({
           <MiniBadge kind={kind} />
         </div>
         <button
+          type="button"
           onClick={onReset}
           className="min-h-[44px] min-w-[44px] shrink-0 rounded-full border-2 px-3 py-2 text-sm transition-all duration-200 ease-in-out hover:scale-[1.04] active:scale-[0.96]"
           style={{
@@ -662,7 +675,7 @@ function MinimizedResultCard({
             background: "var(--ink)",
           }}
         >
-          {matchOver ? "new match" : "play again"}
+          play again
         </button>
       </div>
     </motion.div>
