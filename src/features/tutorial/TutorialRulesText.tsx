@@ -1,14 +1,18 @@
-/** Rule copy — typewriter reveal, left-aligned inside a centered block. */
-import { useEffect, useState } from "react";
+/**
+ * TutorialRulesText — typewriter rule copy inside TutorialRulesContainer.
+ */
+import { useEffect, useState, type ReactNode } from "react";
 
 type TutorialRulesTextProps = {
   children: string;
+  /** Optional inline node after the typed text (e.g. scenario chip). */
+  trailing?: ReactNode;
 };
 
 /** Milliseconds between each character. */
 const CHAR_MS = 34;
 
-export function TutorialRulesText({ children }: TutorialRulesTextProps) {
+export function TutorialRulesText({ children, trailing }: TutorialRulesTextProps) {
   const [visible, setVisible] = useState("");
   const [done, setDone] = useState(false);
 
@@ -42,6 +46,7 @@ export function TutorialRulesText({ children }: TutorialRulesTextProps) {
             |
           </span>
         )}
+        {done && trailing}
       </p>
     </div>
   );

@@ -1,10 +1,11 @@
 /**
- * TutorialEmojiStep — emoji wheel lesson with modal + blinking halo.
- * Replaces the rules container for the final interactive steps.
+ * TutorialEmojiStep — end-of-tutorial modal + tap-only sticker strip.
+ * Uses TutorialReactionWheel (not game ReactionWheel) and TutorialModal.
  */
-import { motion } from "motion/react";
+import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
-import { ReactionWheel } from "@/components/game/ReactionWheel";
+import { TutorialReactionWheel } from "./TutorialReactionWheel";
+import { TutorialModal } from "./TutorialModal";
 import type { Reaction } from "@/components/game/reactions";
 import {
   wheelDiameterForBoard,
@@ -18,6 +19,14 @@ type TutorialEmojiStepProps = {
   onReact: (reaction: Reaction) => void;
 };
 
+/** Ink pill CTA — matches AchievementModal / play-again styling. */
+const TUTORIAL_CTA_STYLE: CSSProperties = {
+  fontFamily: "var(--font-display)",
+  borderColor: "var(--ink)",
+  background: "var(--ink)",
+  color: "var(--paper)",
+};
+
 export function TutorialEmojiStep({
   boardPx,
   modalText,
@@ -26,78 +35,53 @@ export function TutorialEmojiStep({
 }: TutorialEmojiStepProps) {
   const peekH = wheelPeekHeightForBoard(boardPx);
   const wheelDiameter = wheelDiameterForBoard(boardPx);
+  const canReact = !showStartButton;
 
   return (
-    <>
-      <div className="fixed inset-0 z-[52] bg-black/55" aria-hidden />
-
-      <motion.div
-        className="fixed inset-x-0 bottom-0 z-[54] mx-auto flex w-full max-w-[390px] flex-col items-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
+    <div
+      className="relative z-[100] flex w-full min-w-0 flex-col items-center"
+      style={{ pointerEvents: "auto" }}
+      data-tutorial-emoji-step
+    >
+      <TutorialModal
+        label={showStartButton ? "Ready to play" : "Emoji reactions"}
+        className="mx-4 mb-2"
       >
-        <div
-          className="relative mx-4 mb-3 w-[min(92%,340px)] rounded-2xl border-2 px-4 py-4 text-center shadow-lg"
-          style={{
-            borderColor: "var(--ink)",
-            background: "var(--paper)",
-            fontFamily: "var(--font-display)",
-          }}
+        <p
+          className="text-base leading-snug"
+          style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}
         >
-          <p className="text-[clamp(0.95rem,3.8vw,1.1rem)] leading-snug text-[var(--ink)]">
-            {modalText}
-          </p>
-          {showStartButton && (
-            <Link
-              to="/game"
-              className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-full border-2 px-6 py-2 text-sm transition-transform active:scale-[0.97]"
-              style={{
-                borderColor: "var(--ink)",
-                background: "var(--ink)",
-                color: "var(--paper)",
-                fontFamily: "var(--font-display)",
-              }}
-            >
-              start game
-            </Link>
-          )}
-        </div>
-
-        <div
-          className="relative mx-auto w-full shrink-0 overflow-hidden"
-          style={{ height: peekH, width: boardPx }}
-        >
-          <motion.div
-            className="absolute rounded-full"
-            animate={{ opacity: [0.45, 0.9, 0.45], scale: [1, 1.04, 1] }}
-            transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
-            style={{
-              boxShadow: "0 0 0 3px rgba(255,255,200,0.65), 0 0 18px rgba(255,230,120,0.45)",
-              pointerEvents: "none",
-              top: "55%",
-              left: "50%",
-              width: "88%",
-              height: peekH * 1.6,
-              transform: "translate(-50%, -20%)",
-            }}
-            aria-hidden
-          />
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.35, ease: "easeOut" }}
-            className="relative size-full"
+          {modalText}
+        </p>
+        {showStartButton && (
+          <Link
+            to="/game"
+            data-tutorial-start-game
+            className="mt-1 inline-flex min-h-[44px] items-center justify-center self-center rounded-full border-2 px-5 py-2 text-sm transition-transform hover:scale-[1.03] active:scale-[0.97]"
+            style={TUTORIAL_CTA_STYLE}
           >
-            <ReactionWheel
-              onReact={onReact}
-              interactive
-              diameter={wheelDiameter}
-              peekHeight={peekH}
-            />
-          </motion.div>
-        </div>
-      </motion.div>
-    </>
+            start game
+          </Link>
+        )}
+      </TutorialModal>
+
+      <div
+        className="relative z-[100] mx-auto w-full shrink-0 overflow-hidden"
+        style={{
+          height: peekH,
+          width: boardPx,
+          marginBottom: 0,
+          pointerEvents: "auto",
+        }}
+        data-tutorial-wheel-shell
+      >
+        <TutorialReactionWheel
+          onReact={onReact}
+          interactive={canReact}
+          diameter={wheelDiameter}
+          peekHeight={peekH}
+        />
+      </div>
+    </div>
   );
 }

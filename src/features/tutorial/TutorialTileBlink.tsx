@@ -1,4 +1,6 @@
-/** Blinking ring on the active tutorial tile. */
+/**
+ * TutorialTileBlink — cream focus ring on one board cell (tutorial cue only).
+ */
 import { motion } from "motion/react";
 import { SIZE } from "@/game/rules";
 
@@ -14,15 +16,18 @@ export function TutorialTileBlink({ tile, boardPx }: TutorialTileBlinkProps) {
 
   return (
     <motion.div
-      className="pointer-events-none absolute z-20 rounded-[4px] border-[3px] border-[var(--ink)]"
+      className="pointer-events-none absolute z-20 rounded-[5px]"
       style={{
-        left: c * cell + 2,
-        top: r * cell + 2,
-        width: cell - 4,
-        height: cell - 4,
+        left: c * cell + 3,
+        top: r * cell + 3,
+        width: cell - 6,
+        height: cell - 6,
+        border: "2.5px solid var(--paper)",
+        boxShadow: "inset 0 0 0 1px color-mix(in oklab, var(--ink) 18%, transparent)",
+        background: "color-mix(in oklab, var(--paper) 55%, transparent)",
       }}
-      animate={{ opacity: [1, 0.25, 1], scale: [1, 1.03, 1] }}
-      transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
+      animate={{ opacity: [0.75, 0.4, 0.75] }}
+      transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
       aria-hidden
     />
   );

@@ -1,13 +1,13 @@
 /**
- * RulesContainer — bottom tutorial panel (replaces ReactionWheel on /tutorial).
+ * TutorialRulesContainer — bottom tutorial rules panel (feature-local).
  *
  * Composes seven Figma layers into one flush-bottom panel:
  *   Paper 07 → frame border → corner/side brackets → RULES header → content slot.
  *
- * On mount, the whole panel plays a Canva-style "Scrapbook" entrance: slide up
- * from below with a brief tilt that settles flat.
+ * On mount, plays a Canva-style "Scrapbook" entrance (slide up + brief tilt).
+ * Specs: `tutorialRulesContainerSpecs.ts` · Figma nodes 2233:707–2233:754.
  *
- * Specs: `rulesContainerSpecs.ts` · Figma nodes 2233:707–2233:754.
+ * Not shared with GameScreen — do not import from `@/components/game`.
  */
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
@@ -32,31 +32,31 @@ import {
   rulesBoxStyle,
   rulesPctX,
   rulesPctY,
-} from "./rulesContainerSpecs";
+} from "./tutorialRulesContainerSpecs";
 import {
-  RULES_MOTION_ORIGIN,
-  RULES_SCRAPBOOK_ENTER,
-} from "./rulesContainerMotion";
+  TUTORIAL_RULES_MOTION_ORIGIN,
+  TUTORIAL_RULES_SCRAPBOOK_ENTER,
+} from "./tutorialRulesContainerMotion";
 
-type RulesContainerProps = {
-  /** Rule copy / illustrations — rendered inside the hand-drawn frame. */
+type TutorialRulesContainerProps = {
+  /** Rule copy / chips — rendered inside the hand-drawn frame. */
   children?: ReactNode;
   className?: string;
   /** Play the scrapbook entrance on mount. Default true. */
   animateOnMount?: boolean;
   /** Fired once when the scrapbook entrance animation completes. */
   onEntranceComplete?: () => void;
-  /** Tap anywhere on the panel — used to cycle static tutorial messages. */
+  /** Optional tap handler (legacy; advance is usually a full-screen catcher). */
   onTap?: () => void;
 };
 
-export function RulesContainer({
+export function TutorialRulesContainer({
   children,
   className,
   animateOnMount = true,
   onEntranceComplete,
   onTap,
-}: RulesContainerProps) {
+}: TutorialRulesContainerProps) {
   const reduceMotion = useReducedMotion();
   const shouldAnimate = animateOnMount && !reduceMotion;
   const entranceFired = useRef(false);
@@ -70,16 +70,16 @@ export function RulesContainer({
 
   return (
     <motion.section
-      data-rules-container
-      aria-label="Rules"
+      data-tutorial-rules-container
+      aria-label="Tutorial rules"
       className={`relative w-full shrink-0 overflow-visible ${onTap ? "cursor-pointer" : ""} ${className ?? ""}`}
       style={{
         aspectRatio: `${RULES_DESIGN_W} / ${RULES_CONTAINER_H}`,
-        transformOrigin: RULES_MOTION_ORIGIN,
+        transformOrigin: TUTORIAL_RULES_MOTION_ORIGIN,
       }}
-      initial={shouldAnimate ? RULES_SCRAPBOOK_ENTER.initial : false}
-      animate={shouldAnimate ? RULES_SCRAPBOOK_ENTER.animate : undefined}
-      transition={shouldAnimate ? RULES_SCRAPBOOK_ENTER.transition : undefined}
+      initial={shouldAnimate ? TUTORIAL_RULES_SCRAPBOOK_ENTER.initial : false}
+      animate={shouldAnimate ? TUTORIAL_RULES_SCRAPBOOK_ENTER.animate : undefined}
+      transition={shouldAnimate ? TUTORIAL_RULES_SCRAPBOOK_ENTER.transition : undefined}
       onAnimationComplete={() => {
         if (shouldAnimate && !entranceFired.current) {
           entranceFired.current = true;
@@ -100,10 +100,10 @@ export function RulesContainer({
       role={onTap ? "button" : undefined}
       tabIndex={onTap ? 0 : undefined}
     >
-      <RulesPaperLayer />
-      <RulesFrameBorderLayer />
-      <RulesBracketsLayer />
-      <RulesHeaderLayer />
+      <TutorialRulesPaperLayer />
+      <TutorialRulesFrameBorderLayer />
+      <TutorialRulesBracketsLayer />
+      <TutorialRulesHeaderLayer />
 
       {children != null && (
         <div
@@ -124,7 +124,7 @@ export function RulesContainer({
 }
 
 /** 2233:707 — torn kraft background with exact Figma fill crop. */
-function RulesPaperLayer() {
+function TutorialRulesPaperLayer() {
   return (
     <div
       className="pointer-events-none absolute overflow-hidden"
@@ -143,7 +143,7 @@ function RulesPaperLayer() {
 }
 
 /** 2233:712 — hand-drawn rounded rectangle that frames rule content. */
-function RulesFrameBorderLayer() {
+function TutorialRulesFrameBorderLayer() {
   return (
     <div
       className="pointer-events-none absolute overflow-visible"
@@ -163,44 +163,56 @@ function RulesFrameBorderLayer() {
 }
 
 /** 2233:714 + 2233:715 — decorative L-brackets above the header row. */
-function RulesBracketsLayer() {
+function TutorialRulesBracketsLayer() {
   return (
     <div
       className="pointer-events-none absolute inset-0"
       style={{ zIndex: RULES_LAYER_Z.brackets }}
       aria-hidden
     >
-      <RulesBracketImage spec={CORNER_BRACKET} src={RULES_ASSETS.cornerBracket} />
-      <RulesBracketImage spec={SIDE_BRACKET} src={RULES_ASSETS.sideBracket} />
+      <TutorialRulesBracketImage
+        spec={CORNER_BRACKET}
+        src={RULES_ASSETS.cornerBracket}
+      />
+      <TutorialRulesBracketImage
+        spec={SIDE_BRACKET}
+        src={RULES_ASSETS.sideBracket}
+      />
     </div>
   );
 }
 
 /** 2233:754 + 2233:730 + 2233:750 — flanking stars and RULES title. */
-function RulesHeaderLayer() {
+function TutorialRulesHeaderLayer() {
   return (
     <div
       className="pointer-events-none absolute inset-0"
       style={{ zIndex: RULES_LAYER_Z.header }}
       aria-hidden
     >
-      <RulesStar
+      <TutorialRulesStar
         left={RULES_HEADER.starLeft.left}
         top={RULES_HEADER.starLeft.top}
         size={RULES_HEADER.starLeft.size}
       />
-      <RulesStar
+      <TutorialRulesStar
         left={RULES_HEADER.starRight.left}
         top={RULES_HEADER.starRight.top}
         size={RULES_HEADER.starRight.size}
       />
-      <RulesLabel />
+      <TutorialRulesLabel />
     </div>
   );
 }
 
 /** Positions a bracket SVG using Figma bounds + export inset. */
-function RulesBracketImage({ spec, src }: { spec: RulesImageSpec; src: string }) {
+function TutorialRulesBracketImage({
+  spec,
+  src,
+}: {
+  spec: RulesImageSpec;
+  src: string;
+}) {
   return (
     <div className="absolute overflow-visible" style={rulesBoxStyle(spec)}>
       <div className="absolute" style={parseInset(spec.imgInset)}>
@@ -211,7 +223,7 @@ function RulesBracketImage({ spec, src }: { spec: RulesImageSpec; src: string })
 }
 
 /** 2233:730 — RULES title with Figma rotation + ink outline stroke. */
-function RulesLabel() {
+function TutorialRulesLabel() {
   const label = RULES_HEADER.label;
   return (
     <div
@@ -248,7 +260,7 @@ function RulesLabel() {
   );
 }
 
-function RulesStar({
+function TutorialRulesStar({
   left,
   top,
   size,

@@ -1,95 +1,70 @@
 /**
- * TutorialSpotlightOverlay — four-panel dim scrim leaving one grid tile clear.
- *
- * When `passThrough` is true the scrim is visual-only so tile taps reach the board.
+ * TutorialSpotlightOverlay — board-local dim with a hole on one tile.
+ * Uses the same cell math as Board / TutorialTileBlink (no viewport / fixed).
+ * Feature-local — not a GameScreen overlay.
  */
-import { useLayoutEffect, useState } from "react";
 import { SIZE } from "@/game/rules";
 
-type Hole = { x: number; y: number; w: number; h: number };
-
 type TutorialSpotlightOverlayProps = {
-  boardRef: React.RefObject<HTMLElement | null>;
-  tile: number | null;
+  tile: number;
   boardPx: number;
-  /** Visual-only — taps pass through to the board below. */
-  passThrough?: boolean;
-  tappable?: boolean;
-  onTap?: () => void;
 };
 
 export function TutorialSpotlightOverlay({
-  boardRef,
   tile,
   boardPx,
-  passThrough = false,
-  tappable = false,
-  onTap,
 }: TutorialSpotlightOverlayProps) {
-  const [hole, setHole] = useState<Hole | null>(null);
-
-  useLayoutEffect(() => {
-    if (tile == null || !boardRef.current) {
-      setHole(null);
-      return;
-    }
-    const update = () => {
-      if (!boardRef.current || tile == null) return;
-      const rect = boardRef.current.getBoundingClientRect();
-      const cell = boardPx / SIZE;
-      const r = Math.floor(tile / SIZE);
-      const c = tile % SIZE;
-      setHole({
-        x: rect.left + c * cell,
-        y: rect.top + r * cell,
-        w: cell,
-        h: cell,
-      });
-    };
-    update();
-    window.addEventListener("resize", update);
-    window.addEventListener("scroll", update, true);
-    return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update, true);
-    };
-  }, [boardRef, tile, boardPx]);
-
-  if (tile == null || !hole) return null;
-
+  const cell = boardPx / SIZE;
+  const row = Math.floor(tile / SIZE);
+  const col = tile % SIZE;
   const pad = 2;
-  const x = hole.x - pad;
-  const y = hole.y - pad;
-  const w = hole.w + pad * 2;
-  const h = hole.h + pad * 2;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const pe = passThrough ? "none" : tappable ? "auto" : "none";
-
-  const panels = [
-    { left: 0, top: 0, width: vw, height: y },
-    { left: 0, top: y, width: x, height: h },
-    { left: x + w, top: y, width: vw - x - w, height: h },
-    { left: 0, top: y + h, width: vw, height: vh - y - h },
-  ];
+  const left = col * cell + pad;
+  const top = row * cell + pad;
+  const size = cell - pad * 2;
 
   return (
-    <>
-      {panels.map((p, i) => (
-        <div
-          key={i}
-          className="fixed z-20 bg-black/55"
-          style={{
-            left: p.left,
-            top: p.top,
-            width: p.width,
-            height: p.height,
-            pointerEvents: pe,
-          }}
-          onClick={tappable && !passThrough ? onTap : undefined}
-          aria-hidden
-        />
-      ))}
-    </>
+    <div
+      data-tutorial-spotlight
+      className="pointer-events-none absolute inset-0 z-20"
+      style={{ width: boardPx, height: boardPx }}
+      aria-hidden
+    >
+      {/* Four dim panels around the hole */}
+      <div
+        className="absolute left-0 right-0 top-0 bg-black/50"
+        style={{ height: top }}
+      />
+      <div
+        className="absolute left-0 bg-black/50"
+        style={{ top, width: left, height: size }}
+      />
+      <div
+        className="absolute bg-black/50"
+        style={{
+          top,
+          left: left + size,
+          width: Math.max(0, boardPx - left - size),
+          height: size,
+        }}
+      />
+      <div
+        className="absolute bottom-0 left-0 right-0 bg-black/50"
+        style={{ top: top + size, height: Math.max(0, boardPx - top - size) }}
+      />
+
+      {/* Cream sketch ring — no black inner edge */}
+      <div
+        className="absolute rounded-[5px]"
+        style={{
+          left,
+          top,
+          width: size,
+          height: size,
+          border: "3px solid var(--paper)",
+          boxShadow:
+            "0 0 0 1px color-mix(in oklab, var(--ink-brown) 25%, transparent)",
+        }}
+      />
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 /**
- * TutorialDimOverlay — translucent black scrim behind the rules container.
- *
- * Visible immediately on mount (no fade-in). Dissolves only on step exit.
+ * TutorialDimOverlay — full-frame scrim for intro (`except-rules` mode).
+ * TutorialRulesContainer must paint above this (z-40+ vs z-20).
+ * Feature-local — not GameScreen InkPourOverlay.
  */
 import { motion } from "motion/react";
 import type { TutorialOverlayMode } from "./tutorialSteps";
@@ -23,6 +23,7 @@ export function TutorialDimOverlay({
   return (
     <motion.div
       key="tutorial-dim"
+      data-tutorial-dim-overlay={mode}
       className="fixed inset-0 z-20 bg-black/55"
       initial={false}
       animate={{ opacity: 1 }}
@@ -31,7 +32,6 @@ export function TutorialDimOverlay({
       style={{ pointerEvents: tappable ? "auto" : "none" }}
       aria-hidden={!tappable}
       onClick={tappable ? onTap : undefined}
-      data-tutorial-overlay={mode}
     />
   );
 }

@@ -1,0 +1,211 @@
+/**
+ * TutorialRoundTimer — timer bar for scripted tutorial frames.
+ * Supports `forcePct` for idle / expired snapshots. Do not use GameScreen’s
+ * RoundTimer here — that component has no forcePct API.
+ */
+import { useEffect, useMemo, useRef, useState } from "react";
+
+type TutorialRoundTimerProps = {
+  running: boolean;
+  duration: number;
+  keyId: number;
+  idleWarning?: boolean;
+  /** When set, lock the fill to this 0..1 value (idle / expired frames). */
+  forcePct?: number;
+};
+
+const BAR_WIDTH = 320;
+const BAR_HEIGHT = 26;
+const PAD_X = 10;
+const RADIUS = 12;
+const RX = 2;
+const RY = 2;
+const RW = BAR_WIDTH - 4;
+const RH = BAR_HEIGHT - 4;
+
+function roundedRectPerimeter(w: number, h: number, r: number): number {
+  const rr = Math.min(r, w / 2, h / 2);
+  return 2 * (w + h - 2 * rr) + 2 * Math.PI * rr;
+}
+
+function buildZigZagPath(usableWidth: number, seed: number): string {
+  const midY = BAR_HEIGHT / 2;
+  const amp = 6;
+  const step = 6;
+  const count = Math.max(6, Math.floor(usableWidth / step));
+  const j = (n: number) => {
+    const v = Math.sin(seed * 12.9 + n * 4.7) * 43758.5;
+    return (v - Math.floor(v)) * 2 - 1;
+  };
+  let d = `M ${PAD_X} ${midY}`;
+  for (let i = 1; i <= count; i++) {
+    const x = PAD_X + (usableWidth * i) / count + j(i) * 1.2;
+    const y = midY + (i % 2 === 0 ? -amp : amp) + j(i + 3) * 1.5;
+    d += ` L ${x} ${y}`;
+  }
+  return d;
+}
+
+export function TutorialRoundTimer({
+  running,
+  duration,
+  keyId,
+  idleWarning,
+  forcePct,
+}: TutorialRoundTimerProps) {
+  const [pct, setPct] = useState(0);
+  const startRef = useRef<number | null>(null);
+  const elapsedRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setPct(forcePct ?? 0);
+    startRef.current = null;
+    elapsedRef.current = forcePct != null ? forcePct * duration : 0;
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+  }, [keyId, forcePct, duration]);
+
+  useEffect(() => {
+    if (forcePct != null) {
+      setPct(Math.min(1, Math.max(0, forcePct)));
+      return;
+    }
+    if (!running) {
+      if (startRef.current != null) {
+        elapsedRef.current = Math.min(
+          duration,
+          Date.now() - startRef.current,
+        );
+        startRef.current = null;
+        setPct(Math.min(1, elapsedRef.current / duration));
+      }
+      return;
+    }
+
+    startRef.current = Date.now() - elapsedRef.current;
+    const tick = () => {
+      const start = startRef.current;
+      if (start == null) return;
+      const elapsed = Date.now() - start;
+      elapsedRef.current = elapsed;
+      const p = Math.min(1, elapsed / duration);
+      setPct(p);
+      if (p < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [running, duration, forcePct]);
+
+  const usable = BAR_WIDTH - PAD_X * 2;
+  const zigZagPath = useMemo(() => buildZigZagPath(usable, 3.1), [usable]);
+  const clipWidth = Math.max(0, usable * pct);
+  const hasFill = pct > 0.002;
+  const emptyIdle = !running && !hasFill;
+  const tracing = !!idleWarning && !running;
+  const perimeter = useMemo(() => roundedRectPerimeter(RW, RH, RADIUS), []);
+
+  return (
+    <div className="flex w-full justify-center" data-tutorial-round-timer>
+      <svg
+        width="100%"
+        height={BAR_HEIGHT + 6}
+        viewBox={`0 0 ${BAR_WIDTH} ${BAR_HEIGHT + 6}`}
+        preserveAspectRatio="none"
+        className="w-full"
+        aria-label={tracing ? "rival is waiting" : "round timer"}
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={tracing ? undefined : Math.round(pct * 100)}
+      >
+        <defs>
+          <filter id="tutorial-timer-outline" x="-5%" y="-30%" width="110%" height="160%">
+            <feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="2" seed="4" />
+            <feDisplacementMap in="SourceGraphic" scale="1.1" />
+          </filter>
+          <filter id="tutorial-timer-scribble" x="-5%" y="-40%" width="110%" height="180%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="3" seed="17" />
+            <feDisplacementMap in="SourceGraphic" scale="3.4" />
+          </filter>
+          <clipPath id="tutorial-timer-fill-clip">
+            <rect x={PAD_X} y={0} width={clipWidth} height={BAR_HEIGHT} />
+          </clipPath>
+        </defs>
+
+        <g filter="url(#tutorial-timer-outline)">
+          <rect
+            x={RX}
+            y={RY}
+            width={RW}
+            height={RH}
+            rx={RADIUS}
+            ry={RADIUS}
+            fill="none"
+            stroke={
+              tracing
+                ? "color-mix(in oklab, var(--player-you) 45%, var(--ink-brown))"
+                : "var(--ink)"
+            }
+            strokeWidth={tracing ? 2.2 : 2.5}
+            strokeLinecap="round"
+            strokeDasharray={emptyIdle && !tracing ? "6 5" : undefined}
+            opacity={tracing ? 0.45 : 0.9}
+          />
+        </g>
+
+        {tracing && (
+          <g filter="url(#tutorial-timer-outline)">
+            <rect
+              x={RX}
+              y={RY}
+              width={RW}
+              height={RH}
+              rx={RADIUS}
+              ry={RADIUS}
+              fill="none"
+              stroke="color-mix(in oklab, var(--player-you) 55%, var(--ink))"
+              strokeWidth={3.4}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeDasharray={perimeter}
+              strokeDashoffset={perimeter}
+            >
+              <animate
+                attributeName="stroke-dashoffset"
+                values={`${perimeter};0;${perimeter}`}
+                dur="2.4s"
+                repeatCount="indefinite"
+                calcMode="spline"
+                keySplines="0.4 0 0.2 1; 0.4 0 0.2 1"
+                keyTimes="0;0.55;1"
+              />
+            </rect>
+          </g>
+        )}
+
+        {hasFill && (
+          <g clipPath="url(#tutorial-timer-fill-clip)" filter="url(#tutorial-timer-scribble)">
+            <path
+              d={zigZagPath}
+              stroke="var(--ink)"
+              strokeWidth={7}
+              strokeLinecap="round"
+              fill="none"
+              opacity={running ? 0.95 : 0.85}
+            />
+            <path
+              d={zigZagPath}
+              stroke="var(--ink)"
+              strokeWidth={3}
+              strokeLinecap="round"
+              fill="none"
+              opacity={running ? 0.7 : 0.6}
+            />
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}

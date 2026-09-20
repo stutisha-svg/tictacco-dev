@@ -1,5 +1,6 @@
 /**
- * Figma layout for RulesContainer — tutorial screen (407×874 frame).
+ * tutorialRulesContainerSpecs — Figma layout for TutorialRulesContainer only.
+ * Design frame: 407×874. Not used by GameScreen chrome.
  *
  * Container origin = Paper 07 top-left (Figma y=666). Frame border top is local y=56;
  * the Paper 07 fill crop positions the torn kraft edge on that same line.
