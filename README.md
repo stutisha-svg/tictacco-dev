@@ -98,7 +98,7 @@ Keep feature prefixes (`NewGame*`, `Tutorial*`, `Scoring*`, `Achievements*`, `Se
 | `ReactionWheel.tsx` | Sticker wheel docked to the **bottom of the phone** (drag + inertia) |
 | `reactions.ts` / `ReactionSticker.tsx` | Reaction catalog + renderer (kaomoji interim; `assetSrc` ready) |
 | `layoutChrome.ts` / `LAYOUT.md` | Board/wheel sizing constants and layout notes |
-| `MICRO_INTERACTIONS.md` | Game scenarios, UI states, chrome + feature micro-interactions |
+| [`MICRO_INTERACTIONS.md`](./MICRO_INTERACTIONS.md) | Game scenarios, UI states, chrome + feature micro-interactions (repo root) |
 | `TopBar.tsx` | Global kraft strip; settings gear rotates and opens `SettingsMenu` |
 | `CrayonCloseIcon.tsx` / `CrayonBackIcon.tsx` | Crayon-grain circle controls (settings close / back / FAB) |
 | `achievements.ts` / `AchievementNudge.tsx` / `AchievementModal.tsx` | In-match badge catalog, nudge, detail sheet |

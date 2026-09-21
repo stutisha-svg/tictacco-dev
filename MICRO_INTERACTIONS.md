@@ -2,7 +2,7 @@
 
 A designer-facing guide to **what the player sees and feels** in tic tac co: moments, copy, motion, and how pieces of the UI stay in sync.
 
-For layout measurements (wheel size, margins, frame), see [`LAYOUT.md`](./LAYOUT.md).
+For layout measurements (wheel size, margins, frame), see [`LAYOUT.md`](./src/components/game/LAYOUT.md).
 
 ---
 

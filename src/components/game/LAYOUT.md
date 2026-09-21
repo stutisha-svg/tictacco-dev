@@ -1,7 +1,7 @@
 # Game chrome layout
 
 See `.cursor/rules/game-chrome-layout.mdc`.
-For game scenarios, badges, and micro-interactions see [`MICRO_INTERACTIONS.md`](./MICRO_INTERACTIONS.md).
+For game scenarios, badges, and micro-interactions see [`MICRO_INTERACTIONS.md`](../../../MICRO_INTERACTIONS.md).
 For product routes and feature folders see the root [`README.md`](../../../README.md).
 
 - Wheel peeks from **bottom of the screen** (under status/timer), horizontally flipped, flush — no bottom margin/padding.
