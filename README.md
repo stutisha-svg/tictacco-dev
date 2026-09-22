@@ -1,6 +1,6 @@
 # Start here — tic tac co
 
-Hand-drawn **8×8** duel: place X / O / clear on a shared grid. First to sketch **X-O-X** wins. Built with **Vite + TanStack Start + React**, crayon UI tokens, and Lovable-compatible git sync.
+Hand-drawn **8×8** duel: place X / O / clear on a shared grid. First to sketch **X-O-X** wins. Built with **Vite + TanStack Start + React** and crayon UI tokens.
 
 This doc is the meeting handoff: how to run the app, where things live, and how the design system works.
 
@@ -16,7 +16,7 @@ bun install
 bun run dev
 ```
 
-Then open the URL Vite prints (often `http://localhost:8080/` in the Lovable/Vite sandbox; otherwise check the terminal).
+Then open the URL Vite prints (often `http://localhost:8080/`; otherwise check the terminal).
 
 | Script | What it does |
 | --- | --- |
@@ -44,9 +44,9 @@ Product screens are wired in `src/routes/AppRoutes.tsx` (react-router-dom inside
 
 ```
 tictacco/
-├── AGENTS.md                 # Lovable note: don't rewrite published git history
+├── AGENTS.md                 # Repo roles (shared vs personal) + git safety notes
 ├── package.json              # scripts + deps
-├── vite.config.ts            # Lovable TanStack Start Vite config
+├── vite.config.ts            # TanStack Start / Vite config
 ├── src/
 │   ├── styles.css            # crayon design tokens, typography utilities
 │   ├── router.tsx / start.ts / server.ts
@@ -69,7 +69,7 @@ tictacco/
 │   │   ├── game/             # live match chrome & visuals (see below)
 │   │   └── ui/               # generic shadcn-style primitives (mostly unused by game)
 │   ├── hooks/
-│   └── lib/                  # utils, Lovable error reporting
+│   └── lib/                  # utils, error reporting
 ├── public/                   # static assets (homescreen, top-bar, game-env, fonts)
 └── .cursor/rules/            # Cursor agent layout rules for game chrome
 ```
@@ -147,14 +147,31 @@ Documented in `src/components/game/LAYOUT.md` and `.cursor/rules/game-chrome-lay
 
 ---
 
-## Git + Lovable
+## Git remotes (shared vs personal)
 
-This repo is connected to **Lovable** (see `AGENTS.md`):
+This codebase is published as **two private GitHub repos**:
 
-- **Do** commit and push normally — changes sync into Lovable.
-- **Don’t** force-push or rebase/amend/squash commits that are already on the remote (that rewrites Lovable history).
+| Remote (local) | GitHub | Who | Lovable? |
+| --- | --- | --- | --- |
+| **`dev`** (default for collaborators) | [stutisha-svg/tictacco-dev](https://github.com/stutisha-svg/tictacco-dev) | Developers / shared work | **No** — not connected to Lovable |
+| **`origin`** | [stutisha-svg/tictacco](https://github.com/stutisha-svg/tictacco) | Personal polish only | May sync with Lovable on that project |
 
-Cursor ↔ Lovable workflow: commit + push from one tool, pull before editing in the other.
+### If you were invited to **tictacco-dev**
+
+- Clone and push against **https://github.com/stutisha-svg/tictacco-dev**
+- Commits **do not** sync to Lovable
+- Coordinate before rewriting shared `main` history (force-push / rebase / amend of already-pushed commits)
+
+```bash
+git clone https://github.com/stutisha-svg/tictacco-dev.git
+cd tictacco-dev
+bun install
+bun run dev
+```
+
+### Personal polish repo (`tictacco`)
+
+Only for the owner’s final polish. If that remote is Lovable-connected, see `AGENTS.md` — force-pushing or rewriting published history can break Lovable’s copy of the project.
 
 ---
 
