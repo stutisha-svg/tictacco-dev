@@ -15,7 +15,6 @@ Inside the 390px shell, **`AppRoutes.tsx`** mounts the game product with `react-
 | `/game` | Live match (`GameScreen`) |
 | `/tutorial` | Tutorial walkthrough |
 | `/score` | Post-series scoring |
-| `/achievements` | Achievements gallery |
 
 Prefer adding new product pages under `src/features/<name>/` and registering them in `AppRoutes.tsx` rather than inventing a parallel pages tree.
 

@@ -20,6 +20,8 @@ type HomeCtaShellProps = {
   to?: LinkProps["to"];
   /** Optional click handler (e.g. intercept Link navigation). */
   onClick?: (e: MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => void;
+  /** Non-interactive look (e.g. Achievements placeholder on shared build). */
+  disabled?: boolean;
   children: ReactNode;
 };
 
@@ -38,18 +40,21 @@ export function HomeCtaShell({
   align = "block",
   to,
   onClick,
+  disabled = false,
   children,
 }: HomeCtaShellProps) {
   const className = [
     "relative shrink-0 overflow-visible border-0 bg-transparent p-0",
     align === "flex-center" ? "flex items-center justify-center" : "block",
-    CTA_INTERACTION,
+    disabled
+      ? "pointer-events-none cursor-default"
+      : CTA_INTERACTION,
     maxWidthClass ?? "",
   ].join(" ");
 
   const style = { width, height };
 
-  if (to) {
+  if (to && !disabled) {
     return (
       <Link
         to={to}
@@ -68,10 +73,18 @@ export function HomeCtaShell({
     <button
       type="button"
       aria-label={label}
+      aria-disabled={disabled || undefined}
+      tabIndex={disabled ? -1 : undefined}
       data-cta={id}
       className={className}
       style={style}
-      onClick={onClick}
+      onClick={
+        disabled
+          ? (e) => {
+              e.preventDefault();
+            }
+          : onClick
+      }
     >
       {children}
     </button>

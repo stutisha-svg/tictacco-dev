@@ -112,7 +112,6 @@ export const ACHIEVEMENTS = {
   paperFigma: "14:947",
   id: "achievements",
   label: "ACHIEVEMENTS",
-  to: "/achievements" as const,
   frame: SECONDARY_FRAME,
   paper: {
     variant: "achievements-centered-flip-xy",

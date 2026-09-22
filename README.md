@@ -33,7 +33,6 @@ Useful URLs while developing:
 | `/game` | Live match |
 | `/tutorial` | Static rules walkthrough |
 | `/score` | Post-series scoring (after matchOver) |
-| `/achievements` | Badge gallery |
 | `/design-system` | Live token & component reference |
 
 Product screens are wired in `src/routes/AppRoutes.tsx` (react-router-dom inside the 390px shell). TanStack file routes still own `__root.tsx` / `/design-system` — see `src/routes/README.md`.
@@ -53,14 +52,13 @@ tictacco/
 │   ├── routeTree.gen.ts      # auto-generated — don't hand-edit
 │   ├── routes/               # TanStack shell + AppRoutes (see routes/README.md)
 │   │   ├── __root.tsx        # 390px frame, fonts, meta ("tic tac co")
-│   │   ├── AppRoutes.tsx     # /, /game, /tutorial, /score, /achievements
+│   │   ├── AppRoutes.tsx     # /, /game, /tutorial, /score
 │   │   └── design-system.tsx # design reference at /design-system
 │   ├── features/             # product surfaces (namespaced by feature)
-│   │   ├── home/             # HomeScreen, CTAs, newGame setup modal
+│   │   ├── home/             # HomeScreen, CTAs (Achievements CTA non-clickable), newGame setup
 │   │   ├── tutorial/         # Tutorial* walkthrough (not GameScreen chrome)
 │   │   ├── scoring/          # Scoring* post-series results
-│   │   ├── settings/         # TopBar settings overlay + prefs
-│   │   └── achievements/     # Achievements* gallery
+│   │   └── settings/         # TopBar settings overlay + prefs
 │   ├── game/                 # pure game logic (no React UI)
 │   │   ├── rules.ts          # board size, X-O-X win lines, shapes
 │   │   ├── useGameEngine.ts  # turn/timer/match state (optional matchTarget/roundMs)
@@ -78,14 +76,13 @@ tictacco/
 
 | Feature | Route / entry | Notes |
 | --- | --- | --- |
-| `home/` | `/` | Kraft CTAs; **New Game** opens setup modal (does not deep-link straight to `/game`) |
+| `home/` | `/` | Kraft CTAs; **New Game** opens setup modal; **Achievements** CTA is visible but non-clickable |
 | `home/newGame/` | modal on home | Mode (relaxed / timed / ???) → game count slider 3–7 → `/game` with router state |
 | `tutorial/` | `/tutorial` | `Tutorial*`-prefixed static walkthrough; tap-only reaction strip |
 | `scoring/` | `/score` | After matchOver (~3s); groop XP, rematch / quit |
 | `settings/` | TopBar gear | Paper overlay: SFX/game volume, contrast, language, tutorial, quit; prefs in localStorage |
-| `achievements/` | `/achievements` | Static gallery; frame-height + invisible scroll; FAB **back home**; tap → `AchievementModal` |
 
-Keep feature prefixes (`NewGame*`, `Tutorial*`, `Scoring*`, `Achievements*`, `Settings*`) so ownership is obvious at a glance. Do not fold tutorial/scoring chrome into `GameScreen` except thin handoff hooks.
+Keep feature prefixes (`NewGame*`, `Tutorial*`, `Scoring*`, `Settings*`) so ownership is obvious at a glance. Do not fold tutorial/scoring chrome into `GameScreen` except thin handoff hooks. In-match achievement nudge/modal live under `components/game/` (not a gallery route).
 
 ### Game UI (`src/components/game/`)
 
@@ -100,7 +97,7 @@ Keep feature prefixes (`NewGame*`, `Tutorial*`, `Scoring*`, `Achievements*`, `Se
 | `layoutChrome.ts` / `LAYOUT.md` | Board/wheel sizing constants and layout notes |
 | [`MICRO_INTERACTIONS.md`](./MICRO_INTERACTIONS.md) | Game scenarios, UI states, chrome + feature micro-interactions (repo root) |
 | `TopBar.tsx` | Global kraft strip; settings gear rotates and opens `SettingsMenu` |
-| `CrayonCloseIcon.tsx` / `CrayonBackIcon.tsx` | Crayon-grain circle controls (settings close / back / FAB) |
+| `CrayonCloseIcon.tsx` / `CrayonBackIcon.tsx` | Crayon-grain circle controls (settings close / new-game back) |
 | `achievements.ts` / `AchievementNudge.tsx` / `AchievementModal.tsx` | In-match badge catalog, nudge, detail sheet |
 | `WinBadge.tsx` / `Confetti.tsx` | Win/lose/tie/collision chrome + continuous confetti |
 | `BoardWaitingOverlay.tsx` | Idle skeleton + tap cue (synced with status/timer) |
@@ -182,5 +179,5 @@ Only for the owner’s final polish. If that remote is Lovable-connected, see `A
 - Match play with round timer (mode-dependent) and rival bot placements
 - Reaction stickers via the bottom-edge wheel
 - Win / lose / tie badges, confetti, ink-pour on loss; series → scoring + groop XP
-- Settings from TopBar; tutorial walkthrough; achievements gallery
+- Settings from TopBar; tutorial walkthrough; home Achievements CTA (non-clickable); in-match achievement nudge
 - Branding name: **tic tac co** (X-O-X remains the win mechanic copy)

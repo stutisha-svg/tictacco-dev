@@ -225,13 +225,10 @@ The small result card should feel like the **same ribbon**, just shrunk.
 - Profiles, best-of, **groop XP**, rematch → `/game`, quit → `/`  
 - All `Scoring*`-prefixed under `src/features/scoring/`
 
-### Achievements gallery (`/achievements`)
+### Achievements (in-match only)
 
-- Cream summary card + sketch badge cards with per-badge trackers  
-- Screen height **locked to the phone frame**; list uses **invisible** inner scroll  
-- Floating **back home** FAB: sketch ink button + crayon left-arrow, **20px** above bottom  
-- Tap card → shared `AchievementModal`  
-- Static catalog (scoped demo progress) — separate from in-match nudge tracking  
+- Home **ACHIEVEMENTS** CTA stays visible but is **non-clickable** (no gallery route).  
+- In-match: nudge under top bar + status banners + `AchievementModal` — unchanged.  
 
 ---
 
@@ -276,7 +273,6 @@ You don’t need these to design — useful when pairing with engineering:
 - Board & waiting shimmer → `Board.tsx`, `BoardWaitingOverlay.tsx`  
 - Status & timer → `GameScreen.tsx` (status card), `RoundTimer.tsx`  
 - In-match achievements → `achievements.ts`, `AchievementNudge.tsx`, `AchievementModal.tsx`, status cycle in `GameScreen.tsx`  
-- Achievements gallery → `src/features/achievements/`  
 - Badges & mini card → `WinBadge.tsx`, minimized card in `GameScreen.tsx`  
 - Series scoring → `src/features/scoring/` (+ `useScoringMatchOverHandoff` from GameScreen)  
 - New Game setup → `src/features/home/newGame/`  
